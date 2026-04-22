@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag-framework"
+version = "0.1.0"
+description = "Parametrizable RAG Evaluation Framework"
+authors = [
+    {name = "Research Methods 2026 Group 5"}
+]
+dependencies = [
+    "langchain",
+    "langchain-community",
+    "langchain-openai",
+    "chromadb",
+    "ragas",
+    "pyyaml",
+    "pandas",
+    "numpy",
+    "scikit-learn",
+    "rank-bm25",
+    "openai",
+    "nltk",
+    "datasets"
+]
+
+[project.scripts]
+rag-eval = "rag_framework.main:main"
