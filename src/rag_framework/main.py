@@ -5,7 +5,6 @@ import yaml
 import json
 import os
 import time
-from pathlib import Path
 from .ingestion import CorpusIngestion
 from .chunking import ChunkingStrategy
 from .embedding import EmbeddingModel
@@ -21,17 +20,34 @@ def run_experiment(config_path: str, output_dir: str = "./results") -> None:
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
+    # Resolve embedding profile if configured
+    embedding_config = dict(config['embedding'])
+    active_profile = config.get('active_embedding_profile')
+    embedding_profiles = config.get('embedding_profiles', {})
+    if active_profile:
+        selected_profile = embedding_profiles.get(active_profile)
+        if selected_profile is None:
+            available_profiles = sorted(embedding_profiles.keys())
+            raise ValueError(
+                f"active_embedding_profile '{active_profile}' not found. "
+                f"Available profiles: {available_profiles}"
+            )
+        embedding_config = dict(selected_profile)
+        print(f"Using embedding profile: {active_profile}")
+
     # Initialize components
     ingestion = CorpusIngestion(config['ingestion'])
+    if 'dataset' in config.get('ingestion', {}):
+        print(f"Configured to load Hugging Face dataset: {config['ingestion']['dataset']}")
     chunking = ChunkingStrategy(config['chunking'])
-    embedding = EmbeddingModel(config['embedding'])
+    embedding = EmbeddingModel(embedding_config)
     vector_store_mgr = VectorStoreManager(config['vector_store'])
     retriever_cfg = RetrieverConfig(config['retriever'])
     generator = RAGGenerator(config['generator'])
     evaluator = RAGEvaluator(config['evaluation'])
 
     # Load and process documents
-    documents = ingestion.load_documents()
+    documents, ground_truth = ingestion.load_documents()
     chunks = chunking.split_documents(documents)
 
     # Set up vector store
@@ -43,13 +59,15 @@ def run_experiment(config_path: str, output_dir: str = "./results") -> None:
     retriever = retriever_cfg.get_retriever(vector_store)
     chain = generator.get_chain(retriever)
 
-    # Load ground truth
-    with open(config['ground_truth_path']) as f:
-        ground_truth = json.load(f)
-
-    # Run evaluation
+    # Run evaluation using ground truth from dataset
     questions = [item['question'] for item in ground_truth]
     reference_answers = [item['answer'] for item in ground_truth]
+
+    if not questions:
+        raise ValueError(
+            "No ground truth found. Ensure 'dataset' is configured in ingestion "
+            "or provide a 'ground_truth_path' for filesystem mode."
+        )
 
     generated_answers = []
     contexts = []

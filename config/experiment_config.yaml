@@ -1,7 +1,9 @@
 # Sample experiment configuration
 ingestion:
-  loader_type: directory
-  path: ./data
+  dataset: rag-datasets/rag-mini-bioasq
+  dataset_qna_config: question-answer-passages
+  dataset_corpus_config: text-corpus
+  dataset_cache_dir: ./cache/datasets
 
 chunking:
   strategy: recursive
@@ -13,6 +15,26 @@ embedding:
   model_name: text-embedding-ada-002
   api_key: ${OPENAI_API_KEY}
   base_url: null  # For compatible providers
+
+# Optional embedding profiles (e.g. for Ollama).
+# If `active_embedding_profile` matches a key below, that profile overrides `embedding`.
+active_embedding_profile: nomic-embed-text
+embedding_profiles:
+  nomic-embed-text:
+    model_type: openai
+    model_name: nomic-embed-text
+    api_key: ollama
+    base_url: http://localhost:6543/v1
+  mxbai-embed-large:
+    model_type: openai
+    model_name: mxbai-embed-large
+    api_key: ollama
+    base_url: http://localhost:6543/v1
+  bge-m3:
+    model_type: openai
+    model_name: bge-m3
+    api_key: ollama
+    base_url: http://localhost:6543/v1
 
 vector_store:
   store_type: chroma
@@ -28,5 +50,3 @@ generator:
 
 evaluation:
   # Config for custom metrics
-
-ground_truth_path: ./data/ground_truth.json

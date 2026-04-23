@@ -1,6 +1,7 @@
 """Vector database integrations."""
 
-from langchain_community.vectorstores import Chroma, VectorStore
+from langchain_community.vectorstores import VectorStore
+from langchain_chroma import Chroma
 from typing import Dict, Any
 
 
