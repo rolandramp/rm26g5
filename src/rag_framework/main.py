@@ -12,6 +12,7 @@ from .vector_store import VectorStoreManager
 from .retriever import RetrieverConfig
 from .generator import RAGGenerator
 from .evaluation import RAGEvaluator
+from langchain_core.documents import Document
 
 
 def run_experiment(config_path: str, output_dir: str = "./results") -> None:
@@ -47,34 +48,41 @@ def run_experiment(config_path: str, output_dir: str = "./results") -> None:
     evaluator = RAGEvaluator(config['evaluation'])
 
     # Load and process documents
-    documents, ground_truth = ingestion.load_documents()
+    qna_df, corpus_df = ingestion.load_documents()
+
+    if qna_df.empty:
+        raise ValueError(
+            "No ground truth found. Ensure 'dataset' is configured in ingestion "
+            "or provide a 'ground_truth_path' for filesystem mode."
+        )
+
+    # Build Document objects from corpus DataFrame for chunking
+    documents = [
+        Document(page_content=str(row['passage']), metadata={'id': row['id']})
+        for row in corpus_df.to_dict(orient='records')
+    ]
+
     chunks = chunking.split_documents(documents)
 
     # Set up vector store
     embed_model = embedding.get_embedding()
     vector_store = vector_store_mgr.get_vector_store(embed_model)
-    vector_store.add_documents(chunks)
+    vector_store.add_documents(chunks[1:100]) # only indexing a subset for demo purposes - adjust as needed
 
     # Set up retriever and generator
     retriever = retriever_cfg.get_retriever(vector_store)
     chain = generator.get_chain(retriever)
 
     # Run evaluation using ground truth from dataset
-    questions = [item['question'] for item in ground_truth]
-    reference_answers = [item['answer'] for item in ground_truth]
-
-    if not questions:
-        raise ValueError(
-            "No ground truth found. Ensure 'dataset' is configured in ingestion "
-            "or provide a 'ground_truth_path' for filesystem mode."
-        )
+    questions = qna_df['question'].tolist()
+    reference_answers = qna_df['answer'].tolist()
 
     generated_answers = []
     contexts = []
     latencies = []
     costs = []
 
-    for question in questions:
+    for question in questions[1:10]:  # limit to first 10 for demo - adjust as needed
         start_time = time.time()
         result = chain.invoke(question)
         latency = time.time() - start_time

@@ -1,4 +1,4 @@
-services:  
+services:
   ollama-backend:
     build:
       context: ./dockerimage/ollama
@@ -7,6 +7,12 @@ services:
     environment:
       - OLLAMA_MODEL=ministral-3:3b
       - OLLAMA_EMBED_MODELS=nomic-embed-text,mxbai-embed-large,bge-m3
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8G
     volumes:
       - ollama_data:/root/.ollama
     ports:
@@ -17,7 +23,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 600s
-  
+
 volumes:
   ollama_data:
-  

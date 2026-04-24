@@ -1,9 +1,10 @@
 """Corpus ingestion module using LangChain document loaders."""
 
 from langchain_core.documents import Document
-from typing import List, Dict, Any, Tuple
+from typing import Dict, Any, Tuple
 from datasets import load_dataset
 import os
+import pandas as pd
 
 
 class CorpusIngestion:
@@ -12,13 +13,13 @@ class CorpusIngestion:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
 
-    def load_documents(self) -> Tuple[List[Document], List[Dict[str, Any]]]:
+    def load_documents(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Load documents and ground truth QnA from dataset.
 
         Returns:
-            Tuple of (documents, ground_truth) where:
-                - documents: List of Document objects from corpus
-                - ground_truth: List of dicts with 'question', 'answer', 'id' keys
+            Tuple of (qna_df, corpus_df) where:
+                - qna_df: pd.DataFrame with columns ['question','answer','relevant_passage_ids','id']
+                - corpus_df: pd.DataFrame with columns ['passage','id']
         """
         # If a Hugging Face dataset is specified, prefer that.
         if 'dataset' in self.config and self.config.get('dataset'):
@@ -41,54 +42,26 @@ class CorpusIngestion:
             qna_split = ds_qna['test']
             corpus_split = ds_corpus['passages']
 
-            required_qna_columns = {'question', 'answer', 'relevant_passage_ids', 'id'}
-            required_corpus_columns = {'passage', 'id'}
+            required_qna_columns = ['question', 'answer', 'relevant_passage_ids', 'id']
+            required_corpus_columns = ['passage', 'id']
 
-            if not required_qna_columns.issubset(set(qna_split.column_names)):
-                missing = required_qna_columns.difference(set(qna_split.column_names))
-                raise ValueError(f"QnA dataset is missing required columns: {sorted(missing)}")
+            qna_df: pd.DataFrame = qna_split.to_pandas()
+            corpus_df: pd.DataFrame = corpus_split.to_pandas()
 
-            if not required_corpus_columns.issubset(set(corpus_split.column_names)):
-                missing = required_corpus_columns.difference(set(corpus_split.column_names))
-                raise ValueError(f"Corpus dataset is missing required columns: {sorted(missing)}")
+            # Validate required columns exist in the loaded splits
+            missing_qna = set(required_qna_columns) - set(qna_df.columns)
+            if missing_qna:
+                raise ValueError(f"QnA dataset missing columns: {missing_qna}")
 
-            passage_references: Dict[str, List[Any]] = {}
-            for qna_row in qna_split:
-                qna_id = qna_row.get('id')
-                relevant_ids = qna_row.get('relevant_passage_ids', []) or []
-                for passage_id in relevant_ids:
-                    key = str(passage_id)
-                    if key not in passage_references:
-                        passage_references[key] = []
-                    passage_references[key].append(qna_id)
+            missing_corpus = set(required_corpus_columns) - set(corpus_df.columns)
+            if missing_corpus:
+                raise ValueError(f"Corpus dataset missing columns: {missing_corpus}")
 
-            documents: List[Document] = []
-            for corpus_row in corpus_split:
-                passage_text = corpus_row.get('passage', '')
-                passage_id = corpus_row.get('id')
+            # Select and order columns explicitly
+            qna_df = qna_df[required_qna_columns]
+            corpus_df = corpus_df[required_corpus_columns]
 
-                if not isinstance(passage_text, str):
-                    passage_text = str(passage_text)
+            return qna_df, corpus_df
 
-                metadata = {
-                    'source': 'hf_dataset_corpus',
-                    'dataset': str(ds_name),
-                    'id': passage_id,
-                    'linked_qna_ids': passage_references.get(str(passage_id), []),
-                }
-
-                documents.append(Document(page_content=passage_text, metadata=metadata))
-
-            ground_truth: List[Dict[str, Any]] = []
-            for qna_row in qna_split:
-                ground_truth.append({
-                    'question': qna_row.get('question'),
-                    'answer': qna_row.get('answer'),
-                    'id': qna_row.get('id'),
-                })
-
-            return documents, ground_truth
-
-     
-
-        return [], []
+        # If dataset not configured or other branch, return empty DataFrames
+        return pd.DataFrame(columns=['question', 'answer', 'relevant_passage_ids', 'id']), pd.DataFrame(columns=['passage', 'id'])

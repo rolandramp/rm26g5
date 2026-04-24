@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "RAG: Run Experiment",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "module": "rag_framework.main",
       "cwd": "${workspaceFolder}",

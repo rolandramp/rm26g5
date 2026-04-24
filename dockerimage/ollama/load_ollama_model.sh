@@ -30,6 +30,13 @@ elif [ -n "${OLLAMA_EMBED:-}" ]; then
   echo "DONE! Pulling embedding model $OLLAMA_EMBED successful!"
 fi
 
+if [ -n "${OLLAMA_MODEL:-}" ]; then
+  model_trimmed="$(echo "$OLLAMA_MODEL" | sed 's/^ *//;s/ *$//')"
+  echo "Warming up model $model_trimmed..."
+  echo "hello" | /bin/ollama run "$model_trimmed" > /dev/null 2>&1 || true
+  echo "Model warmup complete."
+fi
+
 touch /tmp/ollama_is_ready
 wait "$pid"
 
