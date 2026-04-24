@@ -22,7 +22,7 @@ def run_experiment(config_path: str, output_dir: str = "./results") -> None:
         config = yaml.safe_load(f)
 
     # Resolve embedding profile if configured
-    embedding_config = dict(config['embedding'])
+    embedding_config = dict(config.get('embedding', {}))
     active_profile = config.get('active_embedding_profile')
     embedding_profiles = config.get('embedding_profiles', {})
     if active_profile:
@@ -36,6 +36,20 @@ def run_experiment(config_path: str, output_dir: str = "./results") -> None:
         embedding_config = dict(selected_profile)
         print(f"Using embedding profile: {active_profile}")
 
+    generator_config = dict(config.get('generator', {}))
+    active_gen_profile = config.get('active_generator_profile')
+    generator_profiles = config.get('generator_profiles', {})
+    if active_gen_profile:
+        selected_gen_profile = generator_profiles.get(active_gen_profile)
+        if selected_gen_profile is None:
+            available_profiles = sorted(generator_profiles.keys())
+            raise ValueError(
+                f"active_generator_profile '{active_gen_profile}' not found. "
+                f"Available profiles: {available_profiles}"
+            )
+        generator_config = dict(selected_gen_profile)
+        print(f"Using generator profile: {active_gen_profile}")
+
     # Initialize components
     ingestion = CorpusIngestion(config['ingestion'])
     if 'dataset' in config.get('ingestion', {}):
@@ -44,7 +58,7 @@ def run_experiment(config_path: str, output_dir: str = "./results") -> None:
     embedding = EmbeddingModel(embedding_config)
     vector_store_mgr = VectorStoreManager(config['vector_store'])
     retriever_cfg = RetrieverConfig(config['retriever'])
-    generator = RAGGenerator(config['generator'])
+    generator = RAGGenerator(generator_config)
     evaluator = RAGEvaluator(config['evaluation'])
 
     # Load and process documents

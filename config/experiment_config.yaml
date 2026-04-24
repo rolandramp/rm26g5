@@ -9,15 +9,7 @@ chunking:
   strategy: recursive
   chunk_size: 1000
   chunk_overlap: 200
-
-embedding:
-  model_type: openai
-  model_name: text-embedding-ada-002
-  api_key: ${OPENAI_API_KEY}
-  base_url: null  # For compatible providers
-
-# Optional embedding profiles (e.g. for Ollama).
-# If `active_embedding_profile` matches a key below, that profile overrides `embedding`.
+  
 active_embedding_profile: nomic-embed-text
 embedding_profiles:
   nomic-embed-text:
@@ -43,10 +35,16 @@ vector_store:
 retriever:
   k: 5
 
-generator:
-  model_name: gpt-3.5-turbo
-  api_key: ${OPENAI_API_KEY}
-  base_url: null
+active_generator_profile: ministral-3:3b
+generator_profiles:
+  ministral-3:3b:
+    model_name: ministral-3:3b
+    api_key: ollama
+    base_url: http://localhost:6543/v1
+  gpt-3.5-turbo:
+    model_name: gpt-3.5-turbo
+    api_key: ${OPENAI_API_KEY}
+    base_url: null
 
 evaluation:
   # Config for custom metrics

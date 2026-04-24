@@ -17,7 +17,7 @@ class RAGGenerator:
         """Build the RAG chain."""
         llm = ChatOpenAI(
             model=self.config.get('model_name', 'gpt-3.5-turbo'),
-            api_key=self.config.get('api_key'),
+            api_key=self.config.get('api_key') or 'ollama',
             base_url=self.config.get('base_url')
         )
 

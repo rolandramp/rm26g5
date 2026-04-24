@@ -11,7 +11,7 @@ class OllamaCompatibleEmbeddings(OpenAIEmbeddings):
     def __init__(self, **kwargs):
         super().__init__(check_embedding_ctx_length=False, **kwargs)
 
-    def embed_documents(self, texts: List[str], chunk_size: int = None) -> List[List[float]]:
+    def embed_documents(self, texts: List[str], chunk_size: int = 1000) -> List[List[float]]:
         normalized_texts = [text if isinstance(text, str) else str(text) for text in texts]
         try:
             return super().embed_documents(normalized_texts, chunk_size=chunk_size)
@@ -46,8 +46,8 @@ class EmbeddingModel:
         if model_type == 'openai':
             return OllamaCompatibleEmbeddings(
                 model=self.config.get('model_name', 'text-embedding-ada-002'),
-                api_key=api_key,
-                base_url=base_url
+                api_key=self.config.get('api_key') or 'ollama',
+                base_url=self.config.get('base_url')
             )
         else:
             raise ValueError(f"Unsupported embedding model: {model_type}")
