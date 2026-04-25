@@ -22,11 +22,12 @@ class RAGExperimentService:
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
+        self._cached_data = (None, None)  # (qna_df, corpus_df)
         self._validate_config()
 
     def _validate_config(self):
         """Validate required config sections."""
-        required = ['ingestion', 'chunking', 'vector_store', 'embedding_profiles', 'generator_profiles', 'evaluation']
+        required = ['ingestion', 'chunking', 'vector_store', 'embedding_profiles', 'generator_profiles', 'chunking_profiles', 'evaluation']
         missing = [k for k in required if k not in self.config]
         if missing:
             raise ValueError(f"Missing required config sections: {missing}")
@@ -75,6 +76,22 @@ class RAGExperimentService:
             return generator_config
 
         return {}
+
+    def _resolve_chunking_config(self, profile_name: str = None) -> Dict[str, Any]:
+        """Resolve chunking profile."""
+        chunking_profiles = self.config.get('chunking_profiles', {})
+
+        if profile_name:
+            selected_profile = chunking_profiles.get(profile_name)
+            if selected_profile is None:
+                available = sorted(chunking_profiles.keys())
+                raise ValueError(f"chunking_profile '{profile_name}' not found. Available: {available}")
+            return {
+                'strategy': self.config.get('chunking', {}).get('strategy', 'recursive'),
+                **selected_profile
+            }
+
+        return dict(self.config.get('chunking', {}))
 
     def _resolve_workload_config(self) -> Dict[str, Any]:
         """Resolve workload limits from config."""
@@ -183,3 +200,170 @@ class RAGExperimentService:
         print(f"[INFO] Lexical similarity: {results.get('lexical_similarity_avg', 0):.2f}")
 
         return results
+
+    def run_all_combinations(self, output_dir: str = "./results") -> Dict[str, Any]:
+        """Run all combinations of embedding x generator x chunking profiles."""
+        embedding_profiles = self.config.get('embedding_profiles', {})
+        generator_profiles = self.config.get('generator_profiles', {})
+        chunking_profiles = self.config.get('chunking_profiles', {})
+        workload_config = self._resolve_workload_config()
+
+        emb_keys = list(embedding_profiles.keys())
+        gen_keys = list(generator_profiles.keys())
+        chunk_keys = list(chunking_profiles.keys())
+
+        total_combos = len(emb_keys) * len(gen_keys) * len(chunk_keys)
+        print(f"[INFO] Starting sweep with {total_combos} combinations:")
+        print(f"  - Embedding profiles: {emb_keys}")
+        print(f"  - Generator profiles: {gen_keys}")
+        print(f"  - Chunking profiles: {chunk_keys}")
+        print(f"  - Workload: max_chunks={workload_config.get('max_chunks')}, max_questions={workload_config.get('max_questions')}")
+
+        combos_results = []
+        combo_idx = 0
+
+        for emb_name in emb_keys:
+            emb_config = dict(embedding_profiles[emb_name])
+
+            for gen_name in gen_keys:
+                gen_config = dict(generator_profiles[gen_name])
+
+                for chunk_name in chunk_keys:
+                    combo_idx += 1
+                    chunk_config = self._resolve_chunking_config(chunk_name)
+
+                    combo_dir = f"embed_{emb_name}__gen_{gen_name}__chunk_{chunk_name}"
+                    combo_output = os.path.join(output_dir, combo_dir)
+
+                    print(f"\n[INFO] ===== Combination {combo_idx}/{total_combos} =====")
+                    print(f"[INFO] {emb_name} + {gen_name} + {chunk_name}")
+
+                    try:
+                        combo_results = self._run_single_combo(
+                            emb_config, gen_config, chunk_config,
+                            combo_output, workload_config
+                        )
+                        combo_results['_combo'] = {
+                            'embedding': emb_name,
+                            'generator': gen_name,
+                            'chunking': chunk_name
+                        }
+                        combos_results.append(combo_results)
+                        print(f"[INFO] Combo {combo_idx} completed: latency={combo_results.get('avg_latency', 0):.2f}s, lex_sim={combo_results.get('lexical_similarity_avg', 0):.2f}")
+                    except Exception as e:
+                        print(f"[ERROR] Combo {combo_idx} failed: {e}")
+                        combos_results.append({
+                            '_combo': {'embedding': emb_name, 'generator': gen_name, 'chunking': chunk_name},
+                            '_error': str(e)
+                        })
+
+        print(f"\n[INFO] All {total_combos} combinations completed!")
+        self._save_sweep_results(combos_results, output_dir, workload_config)
+
+        return {'total_combinations': total_combos, 'results': combos_results}
+
+    def _run_single_combo(self, emb_config: Dict, gen_config: Dict, chunk_config: Dict,
+                         output_dir: str, workload_config: Dict) -> Dict[str, Any]:
+        """Run a single combination of profiles."""
+        max_chunks = workload_config.get('max_chunks', 100)
+        max_questions = workload_config.get('max_questions', 10)
+
+        chunking = ChunkingStrategy(chunk_config)
+        embedding = EmbeddingModel(emb_config)
+        vector_store_mgr = VectorStoreManager({
+            'store_type': self.config.get('vector_store', {}).get('store_type', 'chroma'),
+            'persist_directory': os.path.join(output_dir, 'chroma_db')
+        })
+        retriever_cfg = RetrieverConfig(self.config.get('retriever', {}))
+        generator = RAGGenerator(gen_config)
+
+        evaluator = RAGEvaluator(self.config['evaluation'], evaluator_config=emb_config, generator_config=gen_config)
+
+        qna_df, corpus_df = self._cached_data
+        if qna_df is None:
+            ingestion = CorpusIngestion(self.config['ingestion'])
+            qna_df, corpus_df = ingestion.load_documents()
+            self._cached_data = (qna_df, corpus_df)
+
+        documents = [Document(page_content=str(row['passage']), metadata={'id': row['id']})
+                     for row in corpus_df.to_dict(orient='records')]
+
+        chunks = chunking.split_documents(documents)
+        chunks_to_index = chunks[:max_chunks]
+
+        embed_model = embedding.get_embedding()
+        vector_store = vector_store_mgr.get_vector_store(embed_model)
+        vector_store.add_documents(chunks_to_index)
+
+        retriever = retriever_cfg.get_retriever(vector_store)
+        chain = generator.get_chain(retriever)
+
+        questions = qna_df['question'].tolist()
+        reference_answers = qna_df['answer'].tolist()
+
+        questions_to_eval = questions[:max_questions]
+        reference_answers_to_eval = reference_answers[:max_questions]
+
+        generated_answers = []
+        contexts = []
+        latencies = []
+        costs = []
+
+        for question in questions_to_eval:
+            start_time = time.time()
+            result = chain.invoke(question)
+            latency = time.time() - start_time
+
+            generated_answers.append(result)
+            retrieved_contexts = generator.get_last_retrieved_contexts()
+            contexts.append(retrieved_contexts)
+            latencies.append(latency)
+            costs.append(0.0)
+
+        results = evaluator.evaluate_batch(questions_to_eval, reference_answers_to_eval, generated_answers, contexts, latencies, costs)
+
+        os.makedirs(output_dir, exist_ok=True)
+        with open(os.path.join(output_dir, 'results.json'), 'w') as f:
+            json.dump(results, f, indent=2)
+
+        return results
+
+    def _save_sweep_results(self, combos_results: list, output_dir: str, workload_config: Dict):
+        """Save aggregated sweep results."""
+        sweep_results = {
+            'total_combinations': len(combos_results),
+            'workload': workload_config,
+            'combinations': []
+        }
+
+        numeric_metrics = ['avg_latency', 'lexical_similarity_avg', 'total_cost']
+
+        for r in combos_results:
+            combo = r.get('_combo', {})
+            if '_error' in r:
+                combo['_error'] = r['_error']
+            else:
+                combo['metrics'] = {k: v for k, v in r.items() if k not in ['_combo']}
+            sweep_results['combinations'].append(combo)
+
+        if numeric_metrics:
+            best_by_metric = {}
+            for metric in numeric_metrics:
+                best_val = None
+                best_combo = None
+                for r in combos_results:
+                    if '_error' in r:
+                        continue
+                    val = r.get(metric)
+                    if val is not None:
+                        if best_val is None or val > best_val:
+                            best_val = val
+                            best_combo = r.get('_combo', {})
+                if best_combo:
+                    best_by_metric[metric] = {'combo': best_combo, 'value': best_val}
+            sweep_results['best_by_metric'] = best_by_metric
+
+        with open(os.path.join(output_dir, 'sweep_results.json'), 'w') as f:
+            json.dump(sweep_results, f, indent=2)
+
+        print(f"[INFO] Sweep results saved to {output_dir}/sweep_results.json")

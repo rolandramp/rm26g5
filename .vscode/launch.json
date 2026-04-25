@@ -16,7 +16,8 @@
         "--config",
         "config/experiment_config.yaml",
         "--output",
-        "results"
+        "results",
+        "--run-all"
       ],
       "console": "integratedTerminal",
       "justMyCode": true

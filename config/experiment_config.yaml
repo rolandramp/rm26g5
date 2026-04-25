@@ -9,7 +9,18 @@ chunking:
   strategy: recursive
   chunk_size: 1000
   chunk_overlap: 200
-  
+
+chunking_profiles:
+  small:
+    chunk_size: 500
+    chunk_overlap: 100
+  medium:
+    chunk_size: 1000
+    chunk_overlap: 200
+  large:
+    chunk_size: 2000
+    chunk_overlap: 400
+
 active_embedding_profile: nomic-embed-text
 embedding_profiles:
   nomic-embed-text:
@@ -41,14 +52,14 @@ generator_profiles:
     model_name: mistralai/Ministral-3-3B-Instruct-2512-GGUF:Q4_K_M
     api_key: not-needed
     base_url: http://localhost:1235/v1
-  ministral-3:3b:
-    model_name: ministral-3:3b
-    api_key: ollama
-    base_url: http://localhost:6543/v1
-  gpt-3.5-turbo:
-    model_name: gpt-3.5-turbo
-    api_key: ${OPENAI_API_KEY}
-    base_url: null
+  #ministral-3:3b:
+  #  model_name: ministral-3:3b
+  #  api_key: ollama
+  #  base_url: http://localhost:6543/v1
+  #gpt-3.5-turbo:
+  #  model_name: gpt-3.5-turbo
+  #  api_key: ${OPENAI_API_KEY}
+  #  base_url: null
 
 evaluation:
   # Config for custom metrics
