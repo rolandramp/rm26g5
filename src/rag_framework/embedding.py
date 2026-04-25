@@ -11,14 +11,14 @@ class OllamaCompatibleEmbeddings(OpenAIEmbeddings):
     def __init__(self, **kwargs):
         super().__init__(check_embedding_ctx_length=False, **kwargs)
 
-    def embed_documents(self, texts: List[str], chunk_size: int = 1000) -> List[List[float]]:
+    def embed_documents(self, texts: List[str], chunk_size: int = 1000):
         normalized_texts = [text if isinstance(text, str) else str(text) for text in texts]
         try:
             return super().embed_documents(normalized_texts, chunk_size=chunk_size)
         except BadRequestError as exc:
             if "invalid input type" not in str(exc).lower():
                 raise
-            embeddings: List[List[float]] = []
+            embeddings = []
             client_kwargs = {**self._invocation_params}
             chunk_size_ = chunk_size or self.chunk_size
             for i in range(0, len(normalized_texts), chunk_size_):

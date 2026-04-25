@@ -7,10 +7,10 @@ RUN apt update && apt install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml .
-RUN pip install --no-cache-dir -e .
-
 COPY src/ ./src/
 COPY config/ ./config/
+
+RUN pip install --no-cache-dir -e .
 
 ENV PYTHONPATH=/app
 

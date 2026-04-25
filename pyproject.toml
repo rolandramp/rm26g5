@@ -31,3 +31,9 @@ dependencies = [
 
 [project.scripts]
 rag-eval = "rag_framework.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
