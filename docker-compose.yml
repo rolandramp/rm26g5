@@ -15,14 +15,41 @@ services:
           memory: 8G
     volumes:
       - ollama_data:/root/.ollama
-    ports:
-      - "6543:11434"
+    networks:
+      - rag-network
     healthcheck:
       test: ["CMD-SHELL", "ollama list | grep ministral-3:3b || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 600s
+
+  rag-framework:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-framework
+    environment:
+      - OLLAMA_BASE_URL=http://ollama-backend:11434
+      - OPENAI_API_KEY=ollama
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./cache:/app/cache
+      - ./chroma_db:/app/chroma_db
+      - ./results:/app/results
+    ports:
+      - "8000:8000"
+    networks:
+      - rag-network
+    depends_on:
+      ollama-backend:
+        condition: service_healthy
+
+networks:
+  rag-network:
+    driver: bridge
 
 volumes:
   ollama_data:

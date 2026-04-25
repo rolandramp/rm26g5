@@ -16,3 +16,5 @@ dependencies:
     - scikit-learn
     - rank-bm25
     - openai
+    - fastapi
+    - uvicorn
