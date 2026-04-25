@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rag-framework"
-version = "0.1.0"
+version = "1.0.0"
 description = "Parametrizable RAG Evaluation Framework"
 authors = [
-    {name = "Research Methods 2026 Group 5"}
+    {name = "Roland Ramp"}
 ]
 dependencies = [
     "langchain==1.2.15",

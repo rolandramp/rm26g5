@@ -1,118 +1,216 @@
-# rm26g5
-Research Methods 2026 Group 5
+# RAG Evaluation Framework 
 
-## Parametrizable RAG Evaluation Framework
+This is the project of group 5 of the lecture research methods 2026.
 
-A Python 3.14 project for evaluating Retrieval-Augmented Generation (RAG) pipelines against ground-truth datasets.
+A Python-based framework for evaluating Retrieval-Augmented Generation (RAG) pipelines against ground-truth datasets. Designed for researchers to systematically compare different embedding models, chunking strategies, and LLM configurations.
 
-### Features
+## Features
 
-- Configurable document loaders, chunking strategies, embedding models, vector databases, retrievers, and LLMs
-- Support for OpenAI-compatible REST APIs (including local Ollama instances)
-- Local persistent vector storage with Chroma
-- Integration with huggingface datasets (rag-mini-bioasq benchmark)
-- Multiple embedding profile support (nomic-embed-text, mxbai-embed-large, bge-m3)
-- Multiple LLM profile support (ministral-3:3b, gpt-3.5-turbo)
-- CLI and FastAPI for parameterized experiments
-- Result persistence and metadata logging
+- **Configurable Pipelines**: Easily swap embedding models, chunking strategies, vector stores, and LLMs
+- **Multi-Backend Support**: Works with Ollama, llama.cpp, and OpenAI-compatible APIs
+- **Comprehensive Metrics**: Uses RAGAS for semantic similarity, answer correctness, context precision/recall, and faithfulness
+- **CLI & API**: Run experiments from command line or via REST API
+- **Docker-Ready**: Full containerized setup with Docker Compose
 
-### Installation
+## Architecture
 
-1. Create Conda environment:
-```bash
-conda env create -f environment.yml
-conda activate rag-env
+```
+                    ┌─────────────────────┐
+                    │  Config (YAML)      │
+                    └─────────┬──────────┘
+                              │
+              ┌──────────────┼──────────────┐
+              ▼              ▼              ▼
+     ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+     │ Ingestion  │→ │ Chunking    │→ │ Embedding   │
+     └─────────────┘  └─────────────┘  └─────────────┘
+              │              │              │
+              ▼              │              ▼
+     ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+     │ Vector Store│← │ Retriever   │  │ LLM (Judge) │
+     │  (Chroma)   │  └─────────────┘  └─────────────┘
+     └─────────────┘        │
+              │            ▼
+              │    ┌─────────────┐
+              │    │ Generator  │
+              │    └─────────────┘
+              │            │
+              ▼            ▼
+        ┌─────────────────────────────┐
+        │     RAGEvaluator            │
+        │ (RAGAS + Custom Metrics)   │
+        └─────────────────────────────┘
 ```
 
-2. Install the package:
+## Prerequisites
+
+- Python 3.12+
+- Docker & Docker Compose
+- GPU (optional, for llama.cpp)
+
+## Quick Start
+
+### Using Docker Compose
+
 ```bash
-pip install -e .
-```
+# Start all services
+docker-compose up -d
 
-### Configuration
+# Start all services with GPU
+docker-compose --profile gpu up -d
 
-Configure experiment in `config/experiment_config.yaml`:
+# Run experiment via CLI
+docker exec rag-framework rag-eval run-experiment \
+  --config config/experiment_config.yaml \
+  --output results/my-experiment
 
-- **Ingestion**: Dataset source and cache directories
-- **Chunking**: Strategy, chunk size, and overlap
-- **Embedding**: Multiple embedding profiles with different models and APIs
-- **Vector Store**: Store type and persistence directory
-- **Retriever**: Number of documents to retrieve (k)
-- **Generator**: Multiple LLM profiles with different models and APIs
-- **Evaluation**: Evaluation metric configuration
-
-### Usage
-
-#### CLI
-
-Run experiment:
-```bash
-rag-eval run-experiment --config config/experiment_config.yaml --output results/
-```
-
-#### API Server
-
-Start the FastAPI server:
-```bash
-python -m rag_framework.api
-```
-
-Or with uvicorn:
-```bash
-uvicorn rag_framework.api:app --host 0.0.0.0 --port 8000
-```
-
-##### Endpoints
-
-- `GET /` - Service info
-- `GET /health` - Health check
-- `POST /run-experiment` - Run experiment
-
-Example request:
-```bash
+# Or via API
 curl -X POST http://localhost:8000/run-experiment \
   -H "Content-Type: application/json" \
   -d '{"config_path": "config/experiment_config.yaml", "output_dir": "./results"}'
 ```
 
-### Project Structure
+### Local Development
 
-- `src/rag_framework/` - Core modules
-  - `api.py` - FastAPI server
-  - `chunking.py` - Document chunking strategies
-  - `embedding.py` - Embedding model integration
-  - `evaluation.py` - Evaluation metrics
-  - `generator.py` - LLM generation
-  - `ingestion.py` - Dataset loading
-  - `main.py` - CLI entry point
-  - `retriever.py` - Retrieval logic
-  - `vector_store.py` - Vector database integration
-- `config/` - Configuration files
-- `data/` - Input datasets
-- `cache/` - Dataset cache
-- `chroma_db/` - Vector database persistence
-- `results/` - Experiment results
-- `dockerimage/ollama/` - Ollama Docker configuration
-
-### Docker
-
-Start all services with Docker Compose:
 ```bash
-docker-compose up -d
+# Create environment
+conda env create -f environment.yml
+conda activate rag-env
+
+# Install package
+pip install -e .
+
+# Run experiment
+rag-eval run-experiment --config config/experiment_config.yaml --output results/
 ```
 
-This starts:
-- **ollama-backend** - Ollama LLM service (internal network)
-- **rag-framework** - FastAPI server on port 8000
+## Running Experiments
 
-Volume mounts:
-- `./src` → `/app/src`
-- `./config` → `/app/config`
-- `./data` → `/app/data`
-- `./cache` → `/app/cache`
-- `./chroma_db` → `/app/chroma_db`
-- `./results` → `/app/results`
+### CLI
 
-### Dependencies
+```bash
+rag-eval run-experiment \
+  --config config/experiment_config.yaml \
+  --output results/my-experiment
+```
 
-Managed via `pyproject.toml` (PEP 621). No separate requirements.txt.
+### API Server
+
+Start the server:
+
+```bash
+# Direct
+python -m rag_framework.api
+
+# Or with uvicorn
+uvicorn rag_framework.api:app --host 0.0.0.0 --port 8000
+```
+
+API Endpoints:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Service info |
+| GET | `/health` | Health check |
+| POST | `/run-experiment` | Run experiment |
+
+Example:
+
+```bash
+curl -X POST http://localhost:8000/run-experiment \
+  -H "Content-Type: application/json" \
+  -d '{
+    "config_path": "config/experiment_config.yaml",
+    "output_dir": "./results"
+  }'
+```
+
+## Configuration
+
+The experiment is configured via `config/experiment_config.yaml`:
+
+```yaml
+# Data ingestion
+ingestion:
+  dataset: rag-datasets/rag-mini-bioasq
+  dataset_qna_config: question-answer-passages
+  dataset_corpus_config: text-corpus
+  dataset_cache_dir: ./cache/datasets
+
+# Chunking strategy
+chunking:
+  strategy: recursive
+  chunk_size: 1000
+  chunk_overlap: 200
+
+# Embedding models (multiple profiles)
+active_embedding_profile: nomic-embed-text
+embedding_profiles:
+  nomic-embed-text:
+    model_name: nomic-embed-text
+    api_key: ollama
+    base_url: http://ollama-backend:11434/v1
+
+# Generator models (multiple profiles)
+active_generator_profile: gpt-3.5-turbo
+generator_profiles:
+  mistral-3-3b-gguf:
+    model_name: mistralai/Ministral-3-3B-Instruct-2512-GGUF:Q4_K_M
+    base_url: http://llama-cpp-backend:8080/v1
+  gpt-3.5-turbo:
+    model_name: openai/gpt-3.5-turbo
+    base_url: https://openrouter.ai/api/v1/
+
+# Workload limits
+workload:
+  max_chunks: 100
+  max_questions: 10
+```
+
+## Project Structure
+
+```
+.
+├── src/rag_framework/       # Core package
+│   ├── api.py              # FastAPI server
+│   ├── chunking.py         # Document chunking
+│   ├── embedding.py         # Embedding models
+│   ├── evaluation.py       # RAGAS + custom metrics
+│   ├── generator.py        # LLM generation
+│   ├── ingestion.py       # Dataset loading
+│   ├── main.py           # CLI entry point
+│   ├── retriever.py      # Retrieval logic
+│   ├── service.py         # Experiment service
+│   └── vector_store.py   # Chroma integration
+├── config/
+│   └── experiment_config.yaml
+├── dockerimage/
+│   ├── llama-cpp/         # llama.cpp Docker
+│   └── ollama/            # Ollama Docker
+├── docker-compose.yml
+├── Dockerfile
+├── pyproject.toml
+└── environment.yml
+```
+
+## Docker Services
+
+| Service | Port | Description | GPU |
+|---------|------|-------------|-----|
+| rag-framework | 8000 | FastAPI server | - |
+| ollama-backend | 6543 | Ollama with embeddings | Optional |
+| llama-cpp-backend | 1235 | llama.cpp with GGUF models | Required |
+
+
+## Technology Stack
+
+- **LangChain**: RAG pipeline components
+- **Chroma**: Vector storage
+- **RAGAS**: Evaluation metrics
+- **FastAPI**: REST API
+- **Ollama**: Local LLM/embeddings
+- **llama.cpp**: GGUF model inference
+
+## License
+
+See [LICENSE](./LICENSE) file.
