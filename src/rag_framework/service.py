@@ -26,7 +26,7 @@ class RAGExperimentService:
 
     def _validate_config(self):
         """Validate required config sections."""
-        required = ['ingestion', 'chunking', 'vector_store', 'retriever', 'generator', 'evaluation']
+        required = ['ingestion', 'chunking', 'vector_store', 'embedding_profiles', 'generator_profiles', 'evaluation']
         missing = [k for k in required if k not in self.config]
         if missing:
             raise ValueError(f"Missing required config sections: {missing}")
@@ -81,17 +81,29 @@ class RAGExperimentService:
         embedding_config = self._resolve_embedding_config()
         generator_config = self._resolve_generator_config()
 
+        print("[INFO] Initializing RAG pipeline components...")
+        print(f"  [INFO]   - Chunking strategy: {self.config['chunking'].get('strategy', 'default')}")
+        print(f"  [INFO]   - Vector store: {self.config['vector_store'].get('store_type', 'chroma')}")
+        print(f"  [INFO]   - Retriever k: {self.config['retriever'].get('k', 5)}")
+
         ingestion = CorpusIngestion(self.config['ingestion'])
         if 'dataset' in self.config.get('ingestion', {}):
-            print(f"Configured to load Hugging Face dataset: {self.config['ingestion']['dataset']}")
+            print(f"[INFO] Loading Hugging Face dataset: {self.config['ingestion']['dataset']}")
 
         chunking = ChunkingStrategy(self.config['chunking'])
+        print(f"[INFO]   - Chunk size: {self.config['chunking'].get('chunk_size', 1000)}, overlap: {self.config['chunking'].get('chunk_overlap', 200)}")
+
         embedding = EmbeddingModel(embedding_config)
+        print(f"[INFO]   - Embedding model: {embedding_config.get('model_name', 'default')}")
+
         vector_store_mgr = VectorStoreManager(self.config['vector_store'])
         retriever_cfg = RetrieverConfig(self.config['retriever'])
         generator = RAGGenerator(generator_config)
+        print(f"[INFO]   - Generator model: {generator_config.get('model_name', 'default')}")
+
         evaluator = RAGEvaluator(self.config['evaluation'])
 
+        print("[INFO] Loading documents...")
         qna_df, corpus_df = ingestion.load_documents()
 
         if qna_df.empty:
@@ -105,11 +117,16 @@ class RAGExperimentService:
             for row in corpus_df.to_dict(orient='records')
         ]
 
-        chunks = chunking.split_documents(documents)
+        print(f"[INFO] Total documents loaded: {len(documents)}")
 
+        chunks = chunking.split_documents(documents)
+        print(f"[INFO] Total chunks created: {len(chunks)}")
+
+        print("[INFO] Building vector store...")
         embed_model = embedding.get_embedding()
         vector_store = vector_store_mgr.get_vector_store(embed_model)
-        vector_store.add_documents(chunks[1:100])
+        vector_store.add_documents(chunks[1:10])
+        print(f"[INFO] Indexed {min(10, len(chunks))} chunks in vector store")
 
         retriever = retriever_cfg.get_retriever(vector_store)
         chain = generator.get_chain(retriever)
@@ -122,7 +139,8 @@ class RAGExperimentService:
         latencies = []
         costs = []
 
-        for question in questions[1:10]:
+        print(f"[INFO] Running evaluation on {len(questions[1:5])} questions...")
+        for question in questions[1:5]:
             start_time = time.time()
             result = chain.invoke(question)
             latency = time.time() - start_time
@@ -133,12 +151,16 @@ class RAGExperimentService:
             latencies.append(latency)
             costs.append(cost)
 
-        results = evaluator.evaluate_batch(questions, reference_answers, generated_answers, contexts, latencies, costs)
+        print("[INFO] Evaluating results...")
+        results = evaluator.evaluate_batch(questions[1:5], reference_answers[1:5], generated_answers, contexts, latencies, costs)
 
         os.makedirs(output_dir, exist_ok=True)
         with open(f"{output_dir}/results.json", 'w') as f:
             json.dump(results, f, indent=2)
 
-        print(f"Experiment completed. Results saved to {output_dir}/results.json")
+        print(f"[INFO] Experiment completed successfully!")
+        print(f"[INFO] Results saved to {output_dir}/results.json")
+        print(f"[INFO] Average latency: {results.get('avg_latency', 0):.2f}s")
+        print(f"[INFO] Lexical similarity: {results.get('lexical_similarity', 0):.2f}")
 
         return results

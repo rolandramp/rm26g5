@@ -10,6 +10,7 @@ COPY pyproject.toml .
 COPY src/ ./src/
 COPY config/ ./config/
 
+RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -e .
 
 ENV PYTHONPATH=/app

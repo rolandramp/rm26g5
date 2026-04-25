@@ -35,8 +35,12 @@ vector_store:
 retriever:
   k: 5
 
-active_generator_profile: ministral-3:3b
+active_generator_profile: mistral-3-3b-gguf
 generator_profiles:
+  mistral-3-3b-gguf:
+    model_name: mistralai/Ministral-3-3B-Instruct-2512-GGUF:Q4_K_M
+    api_key: not-needed
+    base_url: http://localhost:1235/v1
   ministral-3:3b:
     model_name: ministral-3:3b
     api_key: ollama

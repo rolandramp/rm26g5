@@ -15,6 +15,8 @@ services:
           memory: 8G
     volumes:
       - ollama_data:/root/.ollama
+    ports:
+      - "6543:11434"
     networks:
       - rag-network
     healthcheck:
@@ -32,6 +34,8 @@ services:
     restart: unless-stopped
     ports:
       - "1235:8080"
+    networks:
+      - rag-network
     # GPU: Reserve/enable GPUs for this service.
     # comment out if you want to run on CPU only.
     deploy:
@@ -75,6 +79,8 @@ services:
       - rag-network
     depends_on:
       ollama-backend:
+        condition: service_healthy
+      llama-cpp-backend:
         condition: service_healthy
 
 networks:
