@@ -1,6 +1,6 @@
 {
-  "lexical_similarity": 0.05862356374672276,
-  "avg_latency": 2.874456465244293,
+  "lexical_similarity": 0.06133668628760591,
+  "avg_latency": 2.555788207054138,
   "total_cost": 0.0,
   "retrieval_quality": {
     "recall@5": 0.8,

@@ -52,3 +52,7 @@ generator_profiles:
 
 evaluation:
   # Config for custom metrics
+
+workload:
+  max_chunks: 1000
+  max_questions: 100

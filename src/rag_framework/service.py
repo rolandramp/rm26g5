@@ -76,15 +76,25 @@ class RAGExperimentService:
 
         return generator_config
 
+    def _resolve_workload_config(self) -> Dict[str, Any]:
+        """Resolve workload limits from config."""
+        default = {'max_chunks': 100, 'max_questions': 10}
+        return self.config.get('workload', default)
+
     def run(self, output_dir: str = "./results") -> Dict[str, Any]:
         """Run the RAG evaluation experiment."""
         embedding_config = self._resolve_embedding_config()
         generator_config = self._resolve_generator_config()
+        workload_config = self._resolve_workload_config()
+
+        max_chunks = workload_config.get('max_chunks', 100)
+        max_questions = workload_config.get('max_questions', 10)
 
         print("[INFO] Initializing RAG pipeline components...")
         print(f"  [INFO]   - Chunking strategy: {self.config['chunking'].get('strategy', 'default')}")
         print(f"  [INFO]   - Vector store: {self.config['vector_store'].get('store_type', 'chroma')}")
         print(f"  [INFO]   - Retriever k: {self.config['retriever'].get('k', 5)}")
+        print(f"  [INFO]   - Workload: max_chunks={max_chunks}, max_questions={max_questions}")
 
         ingestion = CorpusIngestion(self.config['ingestion'])
         if 'dataset' in self.config.get('ingestion', {}):
@@ -122,11 +132,14 @@ class RAGExperimentService:
         chunks = chunking.split_documents(documents)
         print(f"[INFO] Total chunks created: {len(chunks)}")
 
+        chunks_to_index = chunks[:max_chunks]
+        print(f"[INFO] Limiting to {len(chunks_to_index)} chunks for indexing")
+
         print("[INFO] Building vector store...")
         embed_model = embedding.get_embedding()
         vector_store = vector_store_mgr.get_vector_store(embed_model)
-        vector_store.add_documents(chunks[1:10])
-        print(f"[INFO] Indexed {min(10, len(chunks))} chunks in vector store")
+        vector_store.add_documents(chunks_to_index)
+        print(f"[INFO] Indexed {len(chunks_to_index)} chunks in vector store")
 
         retriever = retriever_cfg.get_retriever(vector_store)
         chain = generator.get_chain(retriever)
@@ -134,13 +147,17 @@ class RAGExperimentService:
         questions = qna_df['question'].tolist()
         reference_answers = qna_df['answer'].tolist()
 
+        questions_to_eval = questions[:max_questions]
+        reference_answers_to_eval = reference_answers[:max_questions]
+        print(f"[INFO] Limiting to {len(questions_to_eval)} questions for evaluation")
+
         generated_answers = []
         contexts = []
         latencies = []
         costs = []
 
-        print(f"[INFO] Running evaluation on {len(questions[1:5])} questions...")
-        for question in questions[1:5]:
+        print(f"[INFO] Running evaluation on {len(questions_to_eval)} questions...")
+        for question in questions_to_eval:
             start_time = time.time()
             result = chain.invoke(question)
             latency = time.time() - start_time
@@ -152,7 +169,7 @@ class RAGExperimentService:
             costs.append(cost)
 
         print("[INFO] Evaluating results...")
-        results = evaluator.evaluate_batch(questions[1:5], reference_answers[1:5], generated_answers, contexts, latencies, costs)
+        results = evaluator.evaluate_batch(questions_to_eval, reference_answers_to_eval, generated_answers, contexts, latencies, costs)
 
         os.makedirs(output_dir, exist_ok=True)
         with open(f"{output_dir}/results.json", 'w') as f:
