@@ -89,9 +89,16 @@ rag-eval run-experiment --config config/experiment_config.yaml --output results/
 ### CLI
 
 ```bash
+# Run single experiment
 rag-eval run-experiment \
   --config config/experiment_config.yaml \
   --output results/my-experiment
+
+# Run all combinations (embedding x generator x chunking profiles)
+rag-eval run-experiment \
+  --config config/experiment_config.yaml \
+  --output results/my-experiment \
+  --run-all
 ```
 
 ### API Server
@@ -112,17 +119,37 @@ API Endpoints:
 |--------|----------|-------------|
 | GET | `/` | Service info |
 | GET | `/health` | Health check |
-| POST | `/run-experiment` | Run experiment |
+| POST | `/run-experiment` | Run experiment (single or all combinations) |
 
 Example:
 
 ```bash
+# Single experiment
 curl -X POST http://localhost:8000/run-experiment \
   -H "Content-Type: application/json" \
   -d '{
     "config_path": "config/experiment_config.yaml",
     "output_dir": "./results"
   }'
+
+# Run all combinations (embedding x generator x chunking profiles)
+curl -X POST http://localhost:8000/run-experiment \
+  -H "Content-Type: application/json" \
+  -d '{
+    "config_path": "config/experiment_config.yaml",
+    "output_dir": "./results",
+    "run_all": true
+  }'
+```
+
+PowerShell:
+
+```powershell
+# Single experiment
+Invoke-RestMethod -Uri "http://localhost:8000/run-experiment" -Method Post -ContentType "application/json" -Body '{"config_path":"config/experiment_config.yaml","output_dir":"./results"}'
+
+# Run all combinations
+Invoke-RestMethod -Uri "http://localhost:8000/run-experiment" -Method Post -ContentType "application/json" -Body '{"config_path":"config/experiment_config.yaml","output_dir":"./results","run_all":true}'
 ```
 
 ## Configuration

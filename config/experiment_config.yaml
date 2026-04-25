@@ -27,17 +27,33 @@ embedding_profiles:
     model_type: openai
     model_name: nomic-embed-text
     api_key: ollama
-    base_url: http://localhost:6543/v1
+    base_url: http://ollama-backend:11434/v1
   mxbai-embed-large:
     model_type: openai
     model_name: mxbai-embed-large
     api_key: ollama
-    base_url: http://localhost:6543/v1
+    base_url: http://ollama-backend:11434/v1
   bge-m3:
     model_type: openai
     model_name: bge-m3
     api_key: ollama
-    base_url: http://localhost:6543/v1
+    base_url: http://ollama-backend:11434/v1
+# For local usage (not running in Docker), uncomment the following:
+#  nomic-embed-text-local:
+#    model_type: openai
+#    model_name: nomic-embed-text
+#    api_key: ollama
+#    base_url: http://localhost:6543/v1
+#  mxbai-embed-large-local:
+#    model_type: openai
+#    model_name: mxbai-embed-large
+#    api_key: ollama
+#    base_url: http://localhost:6543/v1
+#  bge-m3-local:
+#    model_type: openai
+#    model_name: bge-m3
+#    api_key: ollama
+#    base_url: http://localhost:6543/v1
 
 vector_store:
   store_type: chroma
@@ -46,20 +62,29 @@ vector_store:
 retriever:
   k: 5
 
-active_generator_profile: gpt-3.5-turbo
+active_generator_profile: mistral-3-3b-gguf
 generator_profiles:
   mistral-3-3b-gguf:
     model_name: mistralai/Ministral-3-3B-Instruct-2512-GGUF:Q4_K_M
     api_key: not-needed
-    base_url: http://localhost:1235/v1
+    base_url: http://llama-cpp-backend:8080/v1
   ministral-3:3b:
     model_name: ministral-3:3b
     api_key: ollama
-    base_url: http://localhost:6543/v1
-  gpt-3.5-turbo:
-    model_name: openai/gpt-3.5-turbo
-    api_key: add your-api-key
-    base_url: https://openrouter.ai/api/v1/
+    base_url: http://ollama-backend:11434/v1
+# For local usage (not running in Docker), uncomment the following:
+#  mistral-3-3b-gguf-local:
+#    model_name: mistralai/Ministral-3-3B-Instruct-2512-GGUF:Q4_K_M
+#    api_key: not-needed
+#    base_url: http://localhost:1235/v1
+#  ministral-3:3b-local:
+#    model_name: ministral-3:3b
+#    api_key: ollama
+#    base_url: http://localhost:6543/v1
+#  gpt-3.5-turbo:
+#    model_name: openai/gpt-3.5-turbo
+#    api_key: add your-api-key
+#    base_url: https://openrouter.ai/api/v1/
 
 evaluation:
   # Config for custom metrics
