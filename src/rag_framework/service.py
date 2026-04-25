@@ -40,7 +40,6 @@ class RAGExperimentService:
 
     def _resolve_embedding_config(self) -> Dict[str, Any]:
         """Resolve active embedding profile."""
-        embedding_config = dict(self.config.get('embedding', {}))
         active_profile = self.config.get('active_embedding_profile')
         embedding_profiles = self.config.get('embedding_profiles', {})
 
@@ -54,12 +53,12 @@ class RAGExperimentService:
                 )
             embedding_config = dict(selected_profile)
             print(f"Using embedding profile: {active_profile}")
+            return embedding_config
 
-        return embedding_config
+        return {}
 
     def _resolve_generator_config(self) -> Dict[str, Any]:
         """Resolve active generator profile."""
-        generator_config = dict(self.config.get('generator', {}))
         active_gen_profile = self.config.get('active_generator_profile')
         generator_profiles = self.config.get('generator_profiles', {})
 
@@ -73,8 +72,9 @@ class RAGExperimentService:
                 )
             generator_config = dict(selected_gen_profile)
             print(f"Using generator profile: {active_gen_profile}")
+            return generator_config
 
-        return generator_config
+        return {}
 
     def _resolve_workload_config(self) -> Dict[str, Any]:
         """Resolve workload limits from config."""
@@ -111,7 +111,7 @@ class RAGExperimentService:
         generator = RAGGenerator(generator_config)
         print(f"[INFO]   - Generator model: {generator_config.get('model_name', 'default')}")
 
-        evaluator = RAGEvaluator(self.config['evaluation'])
+        evaluator = RAGEvaluator(self.config['evaluation'], evaluator_config=embedding_config, generator_config=generator_config)
 
         print("[INFO] Loading documents...")
         qna_df, corpus_df = ingestion.load_documents()
@@ -164,7 +164,9 @@ class RAGExperimentService:
             cost = 0.0
 
             generated_answers.append(result)
-            contexts.append([])
+            retrieved_contexts = generator.get_last_retrieved_contexts()
+            contexts.append(retrieved_contexts)
+            print(f"[DEBUG] Retrieved {len(retrieved_contexts)} context chunks for question")
             latencies.append(latency)
             costs.append(cost)
 
@@ -178,6 +180,6 @@ class RAGExperimentService:
         print(f"[INFO] Experiment completed successfully!")
         print(f"[INFO] Results saved to {output_dir}/results.json")
         print(f"[INFO] Average latency: {results.get('avg_latency', 0):.2f}s")
-        print(f"[INFO] Lexical similarity: {results.get('lexical_similarity', 0):.2f}")
+        print(f"[INFO] Lexical similarity: {results.get('lexical_similarity_avg', 0):.2f}")
 
         return results
