@@ -186,13 +186,31 @@ class RAGEvaluator:
             )
 
             # Extract individual metrics from the results
+            results['context_precision_min'] = np.nanmin(ragas_results['context_precision'])
+            results['context_precision_max'] = np.nanmax(ragas_results['context_precision'])
             results['context_precision_avg'] = np.nanmean(ragas_results['context_precision'])
+            results['context_precision_var'] = np.nanvar(ragas_results['context_precision'])
+            results['faithfulness_min'] = np.nanmin(ragas_results['faithfulness'])
+            results['faithfulness_max'] = np.nanmax(ragas_results['faithfulness'])
             results['faithfulness_avg'] = np.nanmean(ragas_results['faithfulness'])
+            results['faithfulness_var'] = np.nanvar(ragas_results['faithfulness'])
+            results['semantic_similarity_min'] = np.nanmin(ragas_results['semantic_similarity'])
+            results['semantic_similarity_max'] = np.nanmax(ragas_results['semantic_similarity'])
             results['semantic_similarity_avg'] = np.nanmean(ragas_results['semantic_similarity'])
+            results['semantic_similarity_var'] = np.nanvar(ragas_results['semantic_similarity'])
+            results['answer_correctness_min'] = np.nanmin(ragas_results['answer_correctness'])
+            results['answer_correctness_max'] = np.nanmax(ragas_results['answer_correctness'])
             results['answer_correctness_avg'] = np.nanmean(ragas_results['answer_correctness'])
+            results['answer_correctness_var'] = np.nanvar(ragas_results['answer_correctness'])
+            results['bleu_score_min'] = np.nanmin(ragas_results['bleu_score'])
+            results['bleu_score_max'] = np.nanmax(ragas_results['bleu_score'])
             results['bleu_score_avg'] = np.nanmean(ragas_results['bleu_score'])
+            results['bleu_score_var'] = np.nanvar(ragas_results['bleu_score'])
+            results['rouge_score_min'] = np.nanmin(ragas_results['rouge_score(mode=fmeasure)'])
+            results['rouge_score_max'] = np.nanmax(ragas_results['rouge_score(mode=fmeasure)'])
             results['rouge_score_avg'] = np.nanmean(ragas_results['rouge_score(mode=fmeasure)'])
-
+            results['rouge_score_var'] = np.nanvar(ragas_results['rouge_score(mode=fmeasure)'])
+            
         except Exception as e:
             # If RAGAS fails (e.g., API unavailable), fall back to basic metrics
             # Don't let evaluation failure crash the whole experiment
@@ -201,7 +219,10 @@ class RAGEvaluator:
 
         # Compute custom metrics that don't require external APIs
         lexical_similarity_per_question = self._compute_lexical_similarity(generated_answers, reference_answers)
-        results['lexical_similarity_avg'] = float(np.mean(lexical_similarity_per_question)) if lexical_similarity_per_question else 0.0
+        results['lexical_similarity_min'] = np.nanmin(lexical_similarity_per_question) if lexical_similarity_per_question else 0.0
+        results['lexical_similarity_max'] = np.nanmax(lexical_similarity_per_question) if lexical_similarity_per_question else 0.0
+        results['lexical_similarity_avg'] = np.nanmean(lexical_similarity_per_question) if lexical_similarity_per_question else 0.0
+        results['lexical_similarity_var'] = np.nanvar(lexical_similarity_per_question) if lexical_similarity_per_question else 0.0
         results['avg_latency'] = float(np.mean(latencies)) if latencies else 0.0
         results['retrieval_quality'] = self._compute_retrieval_quality(formatted_contexts, reference_answers)
 
