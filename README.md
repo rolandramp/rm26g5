@@ -204,6 +204,123 @@ workload:
   max_questions: 10
 ```
 
+## Evaluation Metrics
+
+This framework uses RAGAS (Retrieval Augmented Generation Assessment) for RAG pipeline evaluation, supplemented with traditional NLP metrics. Below is a detailed description of each metric used:
+
+### RAGAS Metrics
+
+#### Faithfulness
+
+**Purpose**: Measures how factually consistent the generated answer is with the retrieved context.
+
+**Range**: 0 to 1 (higher is better)
+
+**How it works**:
+1. Break the generated answer into individual statements/claims
+2. For each statement, verify if it can be inferred from the retrieved context
+3. Calculate: `Faithfulness = Supported Claims / Total Claims`
+
+**Interpretation**: A score of 1.0 means all claims in the answer are supported by the context. A score of 0.5 means only half the claims are supported - the model may be hallucinating or making unsupported statements.
+
+**Example**:
+- Context: "Albert Einstein was born on 14 March 1879 in Germany."
+- High faithfulness (1.0): "Einstein was born in Germany on 14 March 1879."
+- Low faithfulness (0.5): "Einstein was born in Germany on 20 March 1879."
+
+---
+
+#### Semantic Similarity
+
+**Purpose**: Evaluates the semantic resemblance between the generated answer and the ground truth answer.
+
+**Range**: 0 to 1 (higher is better)
+
+**How it works**:
+1. Vectorize the reference answer using an embedding model
+2. Vectorize the generated response using the same embedding model
+3. Compute cosine similarity between the two vectors
+
+**Interpretation**: Measures whether the generated answer captures the same meaning as the ground truth, even if the exact words differ. More robust than exact match since it captures semantic similarity.
+
+---
+
+#### Answer Correctness
+
+**Purpose**: Assesses the overall accuracy of the generated answer compared to the ground truth.
+
+**Range**: 0 to 1 (higher is better)
+
+**How it works**: Combines two aspects:
+1. **Factual Correctness**: Uses F1 score to measure statement overlap between generated and ground truth (TP/FP/FN)
+2. **Semantic Similarity**: Embedding-based similarity (as described above)
+3. **Weighted Average**: Combines both scores (default weights: 75% factual, 25% semantic)
+
+**Interpretation**: A comprehensive measure that catches both factual errors and semantic drift. Lower scores indicate the answer contains incorrect information or diverges significantly from the expected answer.
+
+---
+
+#### Context Precision
+
+**Purpose**: Evaluates the retriever's ability to rank relevant chunks higher than irrelevant ones.
+
+**Range**: 0 to 1 (higher is better)
+
+**How it works**:
+1. For each retrieved chunk at position k, determine if it's relevant to answer the question
+2. Calculate precision@k: `TP@k / (TP@k + FP@k)`
+3. Weight by relevance and compute mean across all chunks
+
+**Interpretation**: High precision means relevant information appears at the top of the retrieval results. Low precision indicates the retriever ranks irrelevant chunks too high, making it harder for the LLM to find the right answer.
+
+---
+
+### Traditional NLP Metrics
+
+#### BLEU Score (Bilingual Evaluation Understudy)
+
+**Purpose**: Measures n-gram precision between generated text and reference text.
+
+**Range**: 0 to 1 (higher is better)
+
+**How it works**:
+1. Count matching n-grams (unigrams, bigrams, trigrams, 4-grams) between generated and reference
+2. Calculate precision for each n-gram level
+3. Apply brevity penalty to penalize short outputs
+4. Compute geometric mean of precisions
+
+**Strengths**: Simple, fast, widely used for machine translation
+**Limitations**: Does not capture semantic meaning, only lexical overlap
+
+---
+
+#### ROUGE Score (Recall-Oriented Understudy for Gisting Evaluation)
+
+**Purpose**: Measures recall-oriented n-gram overlap between generated and reference text.
+
+**Range**: 0 to 1 (higher is better)
+
+**How it works**:
+- **ROUGE-N**: Counts overlapping n-grams (unigrams, bigrams, etc.)
+- **ROUGE-L**: Uses Longest Common Subsequence to capture structural similarity
+
+**Formula**: `ROUGE = Overlapping n-grams in generated text / Total n-grams in reference`
+
+**Strengths**: Captures content coverage, good for summarization tasks
+**Limitations**: Does not consider semantic equivalence, only lexical overlap
+
+---
+
+### Metric Interpretation Guide
+
+| Metric | Poor | Acceptable | Good | Excellent |
+|--------|------|------------|------|-----------|
+| Faithfulness | < 0.5 | 0.5 - 0.7 | 0.7 - 0.9 | > 0.9 |
+| Semantic Similarity | < 0.6 | 0.6 - 0.75 | 0.75 - 0.9 | > 0.9 |
+| Answer Correctness | < 0.5 | 0.5 - 0.7 | 0.7 - 0.85 | > 0.85 |
+| Context Precision | < 0.5 | 0.5 - 0.7 | 0.7 - 0.85 | > 0.85 |
+| BLEU/ROUGE | < 0.3 | 0.3 - 0.5 | 0.5 - 0.7 | > 0.7 |
+
 ## Project Structure
 
 ```
