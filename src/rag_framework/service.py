@@ -19,6 +19,7 @@ instruments (components) to play a harmonious symphony (complete evaluation).
 import os
 import json
 import time
+from datetime import datetime
 from typing import Dict, Any, Optional
 
 import yaml
@@ -269,6 +270,22 @@ class RAGExperimentService:
         max_chunks = workload_config.get('max_chunks', 100)
         max_questions = workload_config.get('max_questions', 10)
 
+        # Create timestamp-based output subfolder
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        run_output_dir = os.path.join(output_dir, timestamp)
+        os.makedirs(run_output_dir, exist_ok=True)
+        print(f"[INFO] Results will be saved to: {run_output_dir}")
+
+        # Create experiment info file
+        self._save_experiment_info(run_output_dir, {
+            'timestamp': timestamp,
+            'mode': 'single_run',
+            'embedding_profile': self.config.get('active_embedding_profile', 'default'),
+            'generator_profile': self.config.get('active_generator_profile', 'default'),
+            'chunking_profile': self.config.get('active_chunking_profile', 'default'),
+            'workload': workload_config
+        })
+
         # Print startup information so user knows what's happening
         print("[INFO] Initializing RAG pipeline components...")
         print(f"  [INFO]   - Chunking strategy: {chunking_config.get('strategy', 'default')}")
@@ -402,16 +419,13 @@ class RAGExperimentService:
         )
 
         # Step 8: Save results to disk
-        # Create output directory if it doesn't exist
-        os.makedirs(output_dir, exist_ok=True)
-
         # Write results as JSON for easy inspection and processing
-        with open(f"{output_dir}/results.json", 'w') as f:
+        with open(f"{run_output_dir}/results.json", 'w') as f:
             json.dump(results, f, indent=2)
 
         # Print final summary for the user
         print(f"[INFO] Experiment completed successfully!")
-        print(f"[INFO] Results saved to {output_dir}/results.json")
+        print(f"[INFO] Results saved to {run_output_dir}/results.json")
         print(f"[INFO] Average latency: {results.get('avg_latency', 0):.2f}s")
         print(f"[INFO] Lexical similarity: {results.get('lexical_similarity_avg', 0):.2f}")
 
@@ -455,6 +469,23 @@ class RAGExperimentService:
         print(f"  - Chunking profiles: {chunk_keys}")
         print(f"  - Workload: max_chunks={workload_config.get('max_chunks')}, max_questions={workload_config.get('max_questions')}")
 
+        # Create timestamp-based output subfolder
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        sweep_output_dir = os.path.join(output_dir, timestamp)
+        os.makedirs(sweep_output_dir, exist_ok=True)
+        print(f"[INFO] Results will be saved to: {sweep_output_dir}")
+
+        # Create experiment info file
+        self._save_experiment_info(sweep_output_dir, {
+            'timestamp': timestamp,
+            'mode': 'sweep',
+            'embedding_profiles': emb_keys,
+            'generator_profiles': gen_keys,
+            'chunking_profiles': chunk_keys,
+            'total_combinations': total_combos,
+            'workload': workload_config
+        })
+
         # Store results from each combination
         combos_results = []
         combo_idx = 0
@@ -474,7 +505,7 @@ class RAGExperimentService:
                     # Create a unique output directory for this combination
                     # Format: embed_xxx__gen_yyy__chunk_zzz
                     combo_dir = f"embed_{emb_name}__gen_{gen_name}__chunk_{chunk_name}"
-                    combo_output = os.path.join(output_dir, combo_dir)
+                    combo_output = os.path.join(sweep_output_dir, combo_dir)
 
                     print(f"\n[INFO] ===== Combination {combo_idx}/{total_combos} =====")
                     print(f"[INFO] {emb_name} + {gen_name} + {chunk_name}")
@@ -505,7 +536,7 @@ class RAGExperimentService:
         print(f"\n[INFO] All {total_combos} combinations completed!")
 
         # Save aggregated results and find best performers
-        self._save_sweep_results(combos_results, output_dir, workload_config)
+        self._save_sweep_results(combos_results, sweep_output_dir, workload_config)
 
         return {'total_combinations': total_combos, 'results': combos_results}
 
@@ -608,6 +639,31 @@ class RAGExperimentService:
             json.dump(results, f, indent=2)
 
         return results
+
+    def _save_experiment_info(self, output_dir: str, info: Dict[str, Any]):
+        """Save experiment configuration information to a text file."""
+        with open(os.path.join(output_dir, 'experiment_info.txt'), 'w') as f:
+            f.write("=" * 60 + "\n")
+            f.write("RAG EXPERIMENT INFO\n")
+            f.write("=" * 60 + "\n\n")
+            f.write(f"Timestamp: {info.get('timestamp', 'N/A')}\n")
+            f.write(f"Mode: {info.get('mode', 'N/A')}\n\n")
+
+            if info.get('mode') == 'single_run':
+                f.write("Configuration:\n")
+                f.write(f"  - Embedding Profile: {info.get('embedding_profile', 'N/A')}\n")
+                f.write(f"  - Generator Profile: {info.get('generator_profile', 'N/A')}\n")
+                f.write(f"  - Chunking Profile: {info.get('chunking_profile', 'N/A')}\n")
+            elif info.get('mode') == 'sweep':
+                f.write("Embedding Profiles: {}\n".format(", ".join(info.get('embedding_profiles', []))))
+                f.write("Generator Profiles: {}\n".format(", ".join(info.get('generator_profiles', []))))
+                f.write("Chunking Profiles: {}\n".format(", ".join(info.get('chunking_profiles', []))))
+                f.write(f"Total Combinations: {info.get('total_combinations', 0)}\n")
+
+            f.write("\nWorkload Settings:\n")
+            workload = info.get('workload', {})
+            f.write(f"  - Max Chunks: {workload.get('max_chunks', 'N/A')}\n")
+            f.write(f"  - Max Questions: {workload.get('max_questions', 'N/A')}\n")
 
     def _save_sweep_results(self, combos_results: list, output_dir: str, workload_config: Dict):
         """

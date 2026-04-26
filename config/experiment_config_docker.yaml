@@ -53,10 +53,10 @@ generator_profiles:
     model_name: mistralai/Ministral-3-3B-Instruct-2512-GGUF:Q4_K_M
     api_key: not-needed
     base_url: http://llama-cpp-backend:8080/v1
-  ministral-3:3b:
-    model_name: ministral-3:3b
-    api_key: ollama
-    base_url: http://ollama-backend:11434/v1
+  #ministral-3:3b:
+  #  model_name: ministral-3:3b
+  #  api_key: ollama
+  #  base_url: http://ollama-backend:11434/v1
   #gpt-3.5-turbo:
   #  model_name: openai/gpt-3.5-turbo
   #  api_key: add your-api-key
@@ -66,5 +66,5 @@ evaluation:
   # Config for custom metrics
 
 workload:
-  max_chunks: 200
-  max_questions: 10
+  max_chunks: 4000
+  max_questions: 15
