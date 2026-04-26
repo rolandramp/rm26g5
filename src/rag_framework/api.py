@@ -9,7 +9,7 @@ app = FastAPI(title="RAG Framework API", version="1.0.0")
 
 
 class ExperimentConfig(BaseModel):
-    config_path: Optional[str] = "config/experiment_config.yaml"
+    config_path: Optional[str] = os.environ.get("CONFIG_PATH", "config/experiment_config_local.yaml")
     output_dir: Optional[str] = "./results"
     run_all: Optional[bool] = False
 

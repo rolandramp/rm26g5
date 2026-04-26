@@ -66,6 +66,7 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama-backend:11434
       - OPENAI_API_KEY=ollama
+      - CONFIG_PATH=config/experiment_config_docker.yaml
     volumes:
       - ./src:/app/src
       - ./config:/app/config

@@ -61,13 +61,13 @@ docker-compose --profile gpu up -d
 
 # Run experiment via CLI
 docker exec rag-framework rag-eval run-experiment \
-  --config config/experiment_config.yaml \
+  --config config/experiment_config_docker.yaml \
   --output results/my-experiment
 
 # Or via API
 curl -X POST http://localhost:8000/run-experiment \
   -H "Content-Type: application/json" \
-  -d '{"config_path": "config/experiment_config.yaml", "output_dir": "./results"}'
+  -d '{"config_path": "config/experiment_config_docker.yaml", "output_dir": "./results"}'
 ```
 
 ### Local Development
@@ -81,7 +81,7 @@ conda activate rag-env
 pip install -e .
 
 # Run experiment
-rag-eval run-experiment --config config/experiment_config.yaml --output results/
+rag-eval run-experiment --config config/experiment_config_local.yaml --output results/
 ```
 
 ## Running Experiments
@@ -91,12 +91,12 @@ rag-eval run-experiment --config config/experiment_config.yaml --output results/
 ```bash
 # Run single experiment
 rag-eval run-experiment \
-  --config config/experiment_config.yaml \
+  --config config/experiment_config_local.yaml \
   --output results/my-experiment
 
 # Run all combinations (embedding x generator x chunking profiles)
 rag-eval run-experiment \
-  --config config/experiment_config.yaml \
+  --config config/experiment_config_local.yaml \
   --output results/my-experiment \
   --run-all
 ```
@@ -128,7 +128,7 @@ Example:
 curl -X POST http://localhost:8000/run-experiment \
   -H "Content-Type: application/json" \
   -d '{
-    "config_path": "config/experiment_config.yaml",
+    "config_path": "config/experiment_config_local.yaml",
     "output_dir": "./results"
   }'
 
@@ -136,7 +136,7 @@ curl -X POST http://localhost:8000/run-experiment \
 curl -X POST http://localhost:8000/run-experiment \
   -H "Content-Type: application/json" \
   -d '{
-    "config_path": "config/experiment_config.yaml",
+    "config_path": "config/experiment_config_local.yaml",
     "output_dir": "./results",
     "run_all": true
   }'
@@ -146,15 +146,15 @@ PowerShell:
 
 ```powershell
 # Single experiment
-Invoke-RestMethod -Uri "http://localhost:8000/run-experiment" -Method Post -ContentType "application/json" -Body '{"config_path":"config/experiment_config.yaml","output_dir":"./results"}'
+Invoke-RestMethod -Uri "http://localhost:8000/run-experiment" -Method Post -ContentType "application/json" -Body '{"config_path":"config/experiment_config_local.yaml","output_dir":"./results"}'
 
 # Run all combinations
-Invoke-RestMethod -Uri "http://localhost:8000/run-experiment" -Method Post -ContentType "application/json" -Body '{"config_path":"config/experiment_config.yaml","output_dir":"./results","run_all":true}'
+Invoke-RestMethod -Uri "http://localhost:8000/run-experiment" -Method Post -ContentType "application/json" -Body '{"config_path":"config/experiment_config_local.yaml","output_dir":"./results","run_all":true}'
 ```
 
 ## Configuration
 
-The experiment is configured via `config/experiment_config.yaml`:
+The experiment is configured via `config/experiment_config_local.yaml` (or `experiment_config_docker.yaml` for Docker):
 
 ```yaml
 # Data ingestion
@@ -210,7 +210,8 @@ workload:
 │   ├── service.py         # Experiment service
 │   └── vector_store.py   # Chroma integration
 ├── config/
-│   └── experiment_config.yaml
+│   ├── experiment_config_local.yaml
+│   └── experiment_config_docker.yaml
 ├── dockerimage/
 │   ├── llama-cpp/         # llama.cpp Docker
 │   └── ollama/            # Ollama Docker

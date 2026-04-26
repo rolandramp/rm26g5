@@ -14,7 +14,7 @@
       "args": [
         "run-experiment",
         "--config",
-        "config/experiment_config.yaml",
+        "config/experiment_config_local.yaml",
         "--output",
         "results",
         "--run-all"
