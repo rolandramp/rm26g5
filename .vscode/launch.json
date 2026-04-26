@@ -5,7 +5,7 @@
       "name": "RAG: Run Experiment",
       "type": "debugpy",
       "request": "launch",
-      "module": "rag_framework.main",
+      "module": "rag_framework.cli",
       "cwd": "${workspaceFolder}",
       "env": {
         "PYTHONPATH": "${workspaceFolder}/src"
