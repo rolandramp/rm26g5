@@ -164,11 +164,21 @@ ingestion:
   dataset_corpus_config: text-corpus
   dataset_cache_dir: ./cache/datasets
 
-# Chunking strategy
-chunking:
-  strategy: recursive
-  chunk_size: 1000
-  chunk_overlap: 200
+# Chunking strategy (multiple profiles)
+active_chunking_profile: medium
+chunking_profiles:
+  small:
+    strategy: recursive
+    chunk_size: 500
+    chunk_overlap: 100
+  medium:
+    strategy: recursive
+    chunk_size: 1000
+    chunk_overlap: 200
+  large:
+    strategy: recursive
+    chunk_size: 2000
+    chunk_overlap: 400
 
 # Embedding models (multiple profiles)
 active_embedding_profile: nomic-embed-text

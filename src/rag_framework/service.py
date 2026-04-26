@@ -27,7 +27,7 @@ class RAGExperimentService:
 
     def _validate_config(self):
         """Validate required config sections."""
-        required = ['ingestion', 'chunking', 'vector_store', 'embedding_profiles', 'generator_profiles', 'chunking_profiles', 'evaluation']
+        required = ['ingestion', 'vector_store', 'embedding_profiles', 'generator_profiles', 'chunking_profiles', 'evaluation']
         missing = [k for k in required if k not in self.config]
         if missing:
             raise ValueError(f"Missing required config sections: {missing}")
@@ -78,20 +78,34 @@ class RAGExperimentService:
         return {}
 
     def _resolve_chunking_config(self, profile_name: str = None) -> Dict[str, Any]:
-        """Resolve chunking profile."""
-        chunking_profiles = self.config.get('chunking_profiles', {})
-
+        """Resolve active chunking profile or a specific profile by name."""
         if profile_name:
+            chunking_profiles = self.config.get('chunking_profiles', {})
             selected_profile = chunking_profiles.get(profile_name)
             if selected_profile is None:
-                available = sorted(chunking_profiles.keys())
-                raise ValueError(f"chunking_profile '{profile_name}' not found. Available: {available}")
-            return {
-                'strategy': self.config.get('chunking', {}).get('strategy', 'recursive'),
-                **selected_profile
-            }
+                available_profiles = sorted(chunking_profiles.keys())
+                raise ValueError(
+                    f"chunking_profile '{profile_name}' not found. "
+                    f"Available profiles: {available_profiles}"
+                )
+            return dict(selected_profile)
 
-        return dict(self.config.get('chunking', {}))
+        active_profile = self.config.get('active_chunking_profile')
+        chunking_profiles = self.config.get('chunking_profiles', {})
+
+        if active_profile:
+            selected_profile = chunking_profiles.get(active_profile)
+            if selected_profile is None:
+                available_profiles = sorted(chunking_profiles.keys())
+                raise ValueError(
+                    f"active_chunking_profile '{active_profile}' not found. "
+                    f"Available profiles: {available_profiles}"
+                )
+            chunking_config = dict(selected_profile)
+            print(f"Using chunking profile: {active_profile}")
+            return chunking_config
+
+        return {}
 
     def _resolve_workload_config(self) -> Dict[str, Any]:
         """Resolve workload limits from config."""
@@ -102,13 +116,14 @@ class RAGExperimentService:
         """Run the RAG evaluation experiment."""
         embedding_config = self._resolve_embedding_config()
         generator_config = self._resolve_generator_config()
+        chunking_config = self._resolve_chunking_config()
         workload_config = self._resolve_workload_config()
 
         max_chunks = workload_config.get('max_chunks', 100)
         max_questions = workload_config.get('max_questions', 10)
 
         print("[INFO] Initializing RAG pipeline components...")
-        print(f"  [INFO]   - Chunking strategy: {self.config['chunking'].get('strategy', 'default')}")
+        print(f"  [INFO]   - Chunking strategy: {chunking_config.get('strategy', 'default')}")
         print(f"  [INFO]   - Vector store: {self.config['vector_store'].get('store_type', 'chroma')}")
         print(f"  [INFO]   - Retriever k: {self.config['retriever'].get('k', 5)}")
         print(f"  [INFO]   - Workload: max_chunks={max_chunks}, max_questions={max_questions}")
@@ -117,8 +132,8 @@ class RAGExperimentService:
         if 'dataset' in self.config.get('ingestion', {}):
             print(f"[INFO] Loading Hugging Face dataset: {self.config['ingestion']['dataset']}")
 
-        chunking = ChunkingStrategy(self.config['chunking'])
-        print(f"[INFO]   - Chunk size: {self.config['chunking'].get('chunk_size', 1000)}, overlap: {self.config['chunking'].get('chunk_overlap', 200)}")
+        chunking = ChunkingStrategy(chunking_config)
+        print(f"[INFO]   - Chunk size: {chunking_config.get('chunk_size', 1000)}, overlap: {chunking_config.get('chunk_overlap', 200)}")
 
         embedding = EmbeddingModel(embedding_config)
         print(f"[INFO]   - Embedding model: {embedding_config.get('model_name', 'default')}")

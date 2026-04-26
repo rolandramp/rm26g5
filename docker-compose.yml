@@ -11,8 +11,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "4"
-          memory: 8G
+          cpus: "12"
+          memory: 32G
     volumes:
       - ollama_data:/root/.ollama
     ports:

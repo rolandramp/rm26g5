@@ -6,7 +6,8 @@ from ragas.metrics import (
     SemanticSimilarity,
     AnswerCorrectness,
     ContextPrecision,
-    ContextRecall,
+    BleuScore,
+    RougeScore,
     Faithfulness
 )
 from ragas.embeddings import LangchainEmbeddingsWrapper
@@ -88,7 +89,8 @@ class RAGEvaluator:
                 SemanticSimilarity(),
                 AnswerCorrectness(),
                 ContextPrecision(),
-                #ContextRecall(),
+                BleuScore(),
+                RougeScore(),
                 Faithfulness()
             ]
             ragas_results = evaluate(
@@ -101,6 +103,8 @@ class RAGEvaluator:
             results['faithfulness'] = ragas_results['faithfulness']
             results['semantic_similarity'] = ragas_results['semantic_similarity']
             results['answer_correctness'] = ragas_results['answer_correctness']
+            results['bleu_score'] = ragas_results['bleu_score']
+            results['rouge_score'] = ragas_results['rouge_score']
         except Exception as e:
             print(f"[WARNING] RAGAS evaluation failed: {e}")
             print("[DEBUG] Falling back to basic metrics only")

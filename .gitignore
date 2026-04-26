@@ -209,3 +209,4 @@ __marimo__/
 cache/
 chroma_db/
 data/
+.opencode/
