@@ -32,7 +32,7 @@ dependencies = [
 ]
 
 [project.scripts]
-rag-eval = "rag_framework.main:main"
+rag-eval = "rag_framework.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
