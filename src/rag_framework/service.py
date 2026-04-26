@@ -365,7 +365,6 @@ class RAGExperimentService:
         generated_answers = []
         contexts = []  # Store retrieved context for each question
         latencies = []  # How long each question took
-        costs = []  # Track API costs (currently always 0, placeholder for future)
 
         print(f"[INFO] Running evaluation on {len(questions_to_eval)} questions...")
 
@@ -379,7 +378,6 @@ class RAGExperimentService:
 
             # Calculate how long it took
             latency = time.time() - start_time
-            cost = 0.0
 
             # Store the result and context for later evaluation
             generated_answers.append(result)
@@ -392,7 +390,6 @@ class RAGExperimentService:
 
             # Track metrics
             latencies.append(latency)
-            costs.append(cost)
 
         # Step 7: Evaluate all results using multiple metrics
         print("[INFO] Evaluating results...")
@@ -401,8 +398,7 @@ class RAGExperimentService:
             reference_answers_to_eval,
             generated_answers,
             contexts,
-            latencies,
-            costs
+            latencies
         )
 
         # Step 8: Save results to disk
@@ -586,7 +582,6 @@ class RAGExperimentService:
         generated_answers = []
         contexts = []
         latencies = []
-        costs = []
 
         for question in questions_to_eval:
             start_time = time.time()
@@ -597,7 +592,6 @@ class RAGExperimentService:
             retrieved_contexts = generator.get_last_retrieved_contexts()
             contexts.append(retrieved_contexts)
             latencies.append(latency)
-            costs.append(0.0)
 
         # Evaluate results
         results = evaluator.evaluate_batch(
@@ -605,8 +599,7 @@ class RAGExperimentService:
             reference_answers_to_eval,
             generated_answers,
             contexts,
-            latencies,
-            costs
+            latencies
         )
 
         # Save this combination's results to its own directory
@@ -642,7 +635,7 @@ class RAGExperimentService:
 
         # Metrics where higher is generally better
         # (You might want different logic for metrics like latency)
-        numeric_metrics = ['avg_latency', 'lexical_similarity_avg', 'total_cost']
+        numeric_metrics = ['avg_latency', 'lexical_similarity_avg']
 
         # Process each combination's results
         for r in combos_results:

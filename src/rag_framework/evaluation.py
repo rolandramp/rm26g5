@@ -116,7 +116,7 @@ class RAGEvaluator:
 
     def evaluate_batch(self, questions, reference_answers,
                     generated_answers, contexts,
-                    latencies, costs):
+                    latencies):
         """
         Compute all metrics for a batch of evaluation results.
 
@@ -129,7 +129,6 @@ class RAGEvaluator:
             generated_answers: What our RAG system produced
             contexts: What context was retrieved for each question
             latencies: How long each question took to answer
-            costs: API costs (if applicable)
 
         Returns:
             Dictionary with all computed metrics
@@ -182,16 +181,17 @@ class RAGEvaluator:
                 dataset,
                 metrics=ragas_metrics,
                 llm=evaluator_llm,
-                embeddings=evaluator_embeddings
+                embeddings=evaluator_embeddings,
+                batch_size=8  # Process in batches for efficiency
             )
 
             # Extract individual metrics from the results
-            results['context_precision'] = ragas_results['context_precision']
-            results['faithfulness'] = ragas_results['faithfulness']
-            results['semantic_similarity'] = ragas_results['semantic_similarity']
-            results['answer_correctness'] = ragas_results['answer_correctness']
-            results['bleu_score'] = ragas_results['bleu_score']
-            results['rouge_score'] = ragas_results['rouge_score']
+            results['context_precision_avg'] = np.nanmean(ragas_results['context_precision'])
+            results['faithfulness_avg'] = np.nanmean(ragas_results['faithfulness'])
+            results['semantic_similarity_avg'] = np.nanmean(ragas_results['semantic_similarity'])
+            results['answer_correctness_avg'] = np.nanmean(ragas_results['answer_correctness'])
+            results['bleu_score_avg'] = np.nanmean(ragas_results['bleu_score'])
+            results['rouge_score_avg'] = np.nanmean(ragas_results['rouge_score(mode=fmeasure)'])
 
         except Exception as e:
             # If RAGAS fails (e.g., API unavailable), fall back to basic metrics
@@ -200,10 +200,9 @@ class RAGEvaluator:
             print("[DEBUG] Falling back to basic metrics only")
 
         # Compute custom metrics that don't require external APIs
-        results['lexical_similarity_per_question'] = self._compute_lexical_similarity(generated_answers, reference_answers)
-        results['lexical_similarity_avg'] = float(np.mean(results['lexical_similarity_per_question'])) if results['lexical_similarity_per_question'] else 0.0
+        lexical_similarity_per_question = self._compute_lexical_similarity(generated_answers, reference_answers)
+        results['lexical_similarity_avg'] = float(np.mean(lexical_similarity_per_question)) if lexical_similarity_per_question else 0.0
         results['avg_latency'] = float(np.mean(latencies)) if latencies else 0.0
-        results['total_cost'] = sum(costs)
         results['retrieval_quality'] = self._compute_retrieval_quality(formatted_contexts, reference_answers)
 
         return results
@@ -276,89 +275,6 @@ class RAGEvaluator:
                 questions_with_contexts += 1
                 total_contexts += len(ctx_list)
                 # Sum up the length of each context chunk
-                for ctx in ctx_list:
-                    if isinstance(ctx, str):
-                        total_length += len(ctx)
-                    elif hasattr(ctx, 'page_content'):
-                        total_length += len(ctx.page_content)
-
-        num_questions = len(contexts) if contexts else 1
-
-        return {
-            'avg_contexts_retrieved': total_contexts / num_questions,
-            'avg_context_length': total_length / max(1, total_contexts),
-            'questions_with_contexts': questions_with_contexts
-        }
-        dataset = Dataset.from_dict(data)
-
-        try:
-            print("[DEBUG] Setting up evaluator LLM for RAGAS...")
-            evaluator_llm = self._get_evaluator_llm()
-            evaluator_embeddings = self._get_evaluator_embeddings()
-
-            print("[DEBUG] Running RAGAS evaluation with metrics...")
-            ragas_metrics = [
-                SemanticSimilarity(),
-                AnswerCorrectness(),
-                ContextPrecision(),
-                BleuScore(),
-                RougeScore(),
-                Faithfulness()
-            ]
-            ragas_results = evaluate(
-                dataset,
-                metrics=ragas_metrics,
-                llm=evaluator_llm,
-                embeddings=evaluator_embeddings
-            )
-            results['context_precision'] = ragas_results['context_precision']
-            results['faithfulness'] = ragas_results['faithfulness']
-            results['semantic_similarity'] = ragas_results['semantic_similarity']
-            results['answer_correctness'] = ragas_results['answer_correctness']
-            results['bleu_score'] = ragas_results['bleu_score']
-            results['rouge_score'] = ragas_results['rouge_score']
-        except Exception as e:
-            print(f"[WARNING] RAGAS evaluation failed: {e}")
-            print("[DEBUG] Falling back to basic metrics only")
-
-        results['lexical_similarity_per_question'] = self._compute_lexical_similarity(generated_answers, reference_answers)
-        results['lexical_similarity_avg'] = float(np.mean(results['lexical_similarity_per_question'])) if results['lexical_similarity_per_question'] else 0.0
-        results['avg_latency'] = float(np.mean(latencies)) if latencies else 0.0
-        results['total_cost'] = sum(costs)
-        results['retrieval_quality'] = self._compute_retrieval_quality(formatted_contexts, reference_answers)
-
-        return results
-
-    def _compute_lexical_similarity(self, generated, reference):
-        """Compute simple word overlap similarity."""
-        scores = []
-        for gen, ref in zip(generated, reference):
-            gen_words = set(gen.lower().split()) if gen else set()
-            ref_words = set(ref.lower().split()) if ref else set()
-            if gen_words and ref_words:
-                overlap = len(gen_words & ref_words) / len(gen_words | ref_words)
-                scores.append(overlap)
-            else:
-                scores.append(0.0)
-        return scores  # Return per-question list
-
-    def _compute_retrieval_quality(self, contexts, reference_answers):
-        """Compute retrieval metrics from actual retrieved contexts."""
-        if not contexts or all(not c for c in contexts):
-            return {
-                'avg_contexts_retrieved': 0.0,
-                'avg_context_length': 0.0,
-                'questions_with_contexts': 0
-            }
-
-        total_contexts = 0
-        total_length = 0
-        questions_with_contexts = 0
-
-        for ctx_list in contexts:
-            if ctx_list:
-                questions_with_contexts += 1
-                total_contexts += len(ctx_list)
                 for ctx in ctx_list:
                     if isinstance(ctx, str):
                         total_length += len(ctx)
