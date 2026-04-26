@@ -175,7 +175,7 @@ class RAGExperimentService:
 
         return {}
 
-    def _resolve_chunking_config(self, profile_name: str = None) -> Dict[str, Any]:
+    def _resolve_chunking_config(self, profile_name: str) -> Dict[str, Any]:
         """
         Determine which chunking profile to use.
 
