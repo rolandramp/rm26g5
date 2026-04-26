@@ -332,7 +332,7 @@ This framework uses RAGAS (Retrieval Augmented Generation Assessment) for RAG pi
 │   ├── evaluation.py       # RAGAS + custom metrics
 │   ├── generator.py        # LLM generation
 │   ├── ingestion.py       # Dataset loading
-│   ├── main.py           # CLI entry point
+│   ├── cli.py           # CLI entry point
 │   ├── retriever.py      # Retrieval logic
 │   ├── service.py         # Experiment service
 │   └── vector_store.py   # Chroma integration
