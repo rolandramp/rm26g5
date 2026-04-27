@@ -1,0 +1,15 @@
+============================================================
+RAG EXPERIMENT INFO
+============================================================
+
+Timestamp: 2026-04-26_19-53-01
+Mode: sweep
+
+Embedding Profiles: nomic-embed-text, mxbai-embed-large, bge-m3
+Generator Profiles: mistral-3-3b-gguf
+Chunking Profiles: small, medium, large
+Total Combinations: 9
+
+Workload Settings:
+  - Max Chunks: 4000
+  - Max Questions: 15
