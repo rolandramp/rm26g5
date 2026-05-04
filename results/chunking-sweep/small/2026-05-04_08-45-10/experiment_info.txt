@@ -1,0 +1,15 @@
+============================================================
+RAG EXPERIMENT INFO
+============================================================
+
+Timestamp: 2026-05-04_08-45-10
+Mode: single_run
+
+Configuration:
+  - Embedding Profile: nomic-embed-text
+  - Generator Profile: openrouter-gemma-4-26b
+  - Chunking Profile: small
+
+Workload Settings:
+  - Max Chunks: 4000
+  - Max Questions: 15

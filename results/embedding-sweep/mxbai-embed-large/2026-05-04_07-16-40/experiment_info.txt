@@ -1,0 +1,15 @@
+============================================================
+RAG EXPERIMENT INFO
+============================================================
+
+Timestamp: 2026-05-04_07-16-40
+Mode: single_run
+
+Configuration:
+  - Embedding Profile: mxbai-embed-large
+  - Generator Profile: openrouter-gemma-4-26b
+  - Chunking Profile: medium
+
+Workload Settings:
+  - Max Chunks: 4000
+  - Max Questions: 15

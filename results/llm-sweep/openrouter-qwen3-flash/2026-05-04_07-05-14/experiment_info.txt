@@ -1,0 +1,15 @@
+============================================================
+RAG EXPERIMENT INFO
+============================================================
+
+Timestamp: 2026-05-04_07-05-14
+Mode: single_run
+
+Configuration:
+  - Embedding Profile: nomic-embed-text
+  - Generator Profile: openrouter-qwen3-flash
+  - Chunking Profile: medium
+
+Workload Settings:
+  - Max Chunks: 4000
+  - Max Questions: 15

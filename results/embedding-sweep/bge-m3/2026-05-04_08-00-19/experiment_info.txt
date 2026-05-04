@@ -1,0 +1,15 @@
+============================================================
+RAG EXPERIMENT INFO
+============================================================
+
+Timestamp: 2026-05-04_08-00-19
+Mode: single_run
+
+Configuration:
+  - Embedding Profile: bge-m3
+  - Generator Profile: openrouter-gemma-4-26b
+  - Chunking Profile: medium
+
+Workload Settings:
+  - Max Chunks: 4000
+  - Max Questions: 15
