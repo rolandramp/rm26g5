@@ -210,3 +210,15 @@ cache/
 chroma_db/
 data/
 .opencode/
+
+#Files produced in the creation of the poster
+poster/*.aux
+poster/*.fdb_latexmk
+poster/*.fls
+poster/*.nav
+poster/*.out
+poster/*.pdf
+poster/*.snm
+poster/*.toc
+poster/*.synctex*
+poster/*.dvi

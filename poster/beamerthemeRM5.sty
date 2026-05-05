@@ -1,0 +1,223 @@
+% beamerthemeRM5.sty
+% Custom beamer theme for Research Methods SS2026 — Group 5 poster.
+% Designed for portrait A4 posters using beamerposter.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{beamerthemeRM5}[2026/05/05 RM5 Poster Theme]
+
+\RequirePackage{tikz}
+\RequirePackage{xcolor}
+\RequirePackage{etoolbox}
+\usetikzlibrary{shadings,shadows.blur,calc}
+
+% ---------------------------------------------------------------------------
+% Color palette — a calm, modern academic look:
+%   deep midnight base, warm ember accent, soft parchment background.
+% ---------------------------------------------------------------------------
+\definecolor{RMmidnight}{HTML}{1B2A4E}   % primary dark
+\definecolor{RMocean}{HTML}{2E5A88}      % secondary blue
+\definecolor{RMember}{HTML}{D9744F}      % warm accent
+\definecolor{RMsand}{HTML}{F4EFE6}       % page background
+\definecolor{RMpaper}{HTML}{FBFAF6}      % block background
+\definecolor{RMink}{HTML}{14213D}        % body text
+\definecolor{RMmist}{HTML}{C9D2DD}       % subtle separators
+
+% ---------------------------------------------------------------------------
+% Beamer color assignments
+% ---------------------------------------------------------------------------
+\setbeamercolor{background canvas}{bg=RMsand}
+\setbeamercolor{normal text}{fg=RMink, bg=RMsand}
+\setbeamercolor{structure}{fg=RMmidnight}
+\setbeamercolor{alerted text}{fg=RMember}
+
+\setbeamercolor{title}{fg=white, bg=RMmidnight}
+\setbeamercolor{author}{fg=RMmist}
+\setbeamercolor{institute}{fg=RMmist}
+
+\setbeamercolor{frametitle}{fg=white, bg=RMmidnight}
+\setbeamercolor{block title}{fg=white, bg=RMocean}
+\setbeamercolor{block body}{fg=RMink, bg=RMpaper}
+\setbeamercolor{block title alerted}{fg=white, bg=RMember}
+\setbeamercolor{block body alerted}{fg=RMink, bg=RMpaper}
+\setbeamercolor{block title example}{fg=white, bg=RMmidnight}
+\setbeamercolor{block body example}{fg=RMink, bg=RMpaper}
+
+\setbeamercolor{itemize item}{fg=RMember}
+\setbeamercolor{itemize subitem}{fg=RMocean}
+\setbeamercolor{enumerate item}{fg=RMember}
+\setbeamercolor{section in head/foot}{fg=white, bg=RMmidnight}
+\setbeamercolor{subsection in head/foot}{fg=white, bg=RMocean}
+
+% ---------------------------------------------------------------------------
+% Fonts
+% ---------------------------------------------------------------------------
+\setbeamerfont{title}{family=\sffamily, series=\bfseries, size=\LARGE}
+\setbeamerfont{author}{family=\sffamily, size=\normalsize}
+\setbeamerfont{institute}{family=\sffamily, shape=\itshape, size=\small}
+\setbeamerfont{frametitle}{family=\sffamily, series=\bfseries, size=\LARGE}
+\setbeamerfont{block title}{family=\sffamily, series=\bfseries, size=\large}
+\setbeamerfont{block body}{family=\rmfamily, size=\normalsize}
+\setbeamerfont{itemize/enumerate body}{family=\rmfamily}
+
+% ---------------------------------------------------------------------------
+% Disable default navigation symbols
+% ---------------------------------------------------------------------------
+\setbeamertemplate{navigation symbols}{}
+
+% ---------------------------------------------------------------------------
+% Itemize markers — small filled squares for a clean grid feel
+% ---------------------------------------------------------------------------
+\setbeamertemplate{itemize item}{\raisebox{0.15ex}{\footnotesize\(\blacksquare\)}}
+\setbeamertemplate{itemize subitem}{\raisebox{0.2ex}{\scriptsize\(\blacktriangleright\)}}
+\setbeamertemplate{itemize subsubitem}{\raisebox{0.2ex}{\scriptsize\(\cdot\)}}
+
+% ---------------------------------------------------------------------------
+% Block template — rounded card with a colored ribbon header
+% ---------------------------------------------------------------------------
+\setbeamertemplate{block begin}{%
+  \par\vskip0.6ex%
+  \begin{beamercolorbox}[
+      wd=\textwidth,
+      sep=0.6em,
+      leftskip=0.8em,
+      rightskip=0.8em,
+      rounded=false]{block title}%
+    \raisebox{-0.2ex}{\rule[-0.4ex]{0.35em}{1.6ex}}\hskip0.55em%
+    \usebeamerfont{block title}\insertblocktitle%
+  \end{beamercolorbox}%
+  \nointerlineskip%
+  \begin{beamercolorbox}[
+      wd=\textwidth,
+      sep=0.9em,
+      leftskip=0.9em,
+      rightskip=0.9em,
+      vmode]{block body}%
+  \usebeamerfont{block body}%
+}
+\setbeamertemplate{block end}{%
+  \end{beamercolorbox}\vskip1.0ex%
+}
+
+\setbeamertemplate{block alerted begin}{%
+  \par\vskip0.6ex%
+  \begin{beamercolorbox}[
+      wd=\textwidth,
+      sep=0.6em,
+      leftskip=0.8em,
+      rightskip=0.8em]{block title alerted}%
+    \raisebox{-0.2ex}{\rule[-0.4ex]{0.35em}{1.6ex}}\hskip0.55em%
+    \usebeamerfont{block title}\insertblocktitle%
+  \end{beamercolorbox}%
+  \nointerlineskip%
+  \begin{beamercolorbox}[
+      wd=\textwidth,
+      sep=0.9em,
+      leftskip=0.9em,
+      rightskip=0.9em,
+      vmode]{block body alerted}%
+  \usebeamerfont{block body}%
+}
+\setbeamertemplate{block alerted end}{%
+  \end{beamercolorbox}\vskip1.0ex%
+}
+
+\setbeamertemplate{block example begin}{%
+  \par\vskip0.6ex%
+  \begin{beamercolorbox}[
+      wd=\textwidth,
+      sep=0.6em,
+      leftskip=0.8em,
+      rightskip=0.8em]{block title example}%
+    \raisebox{-0.2ex}{\rule[-0.4ex]{0.35em}{1.6ex}}\hskip0.55em%
+    \usebeamerfont{block title}\insertblocktitle%
+  \end{beamercolorbox}%
+  \nointerlineskip%
+  \begin{beamercolorbox}[
+      wd=\textwidth,
+      sep=0.9em,
+      leftskip=0.9em,
+      rightskip=0.9em,
+      vmode]{block body example}%
+  \usebeamerfont{block body}%
+}
+\setbeamertemplate{block example end}{%
+  \end{beamercolorbox}\vskip1.0ex%
+}
+
+% ---------------------------------------------------------------------------
+% Headline — title banner with decorative TikZ accents.
+% ---------------------------------------------------------------------------
+\setbeamertemplate{headline}{%
+  \begin{tikzpicture}[overlay, remember picture]
+    % main banner — compact
+    \fill[RMmidnight]
+      (current page.north west) rectangle
+      ([yshift=-2.6cm]current page.north east);
+    % ember stripe along the bottom of the banner
+    \fill[RMember]
+      ([yshift=-2.6cm]current page.north west) rectangle
+      ([yshift=-2.72cm]current page.north east);
+    % subtle ocean band just below
+    \fill[RMocean]
+      ([yshift=-2.72cm]current page.north west) rectangle
+      ([yshift=-2.78cm]current page.north east);
+    % geometric accent — three squares in the upper-right
+    \foreach \i in {0,1,2}{%
+      \fill[RMember, opacity={0.35+0.25*\i}]
+        ([xshift={-0.9cm-\i*0.55cm},yshift={-0.45cm-\i*0.12cm}]current page.north east)
+        rectangle
+        ([xshift={-0.55cm-\i*0.55cm},yshift={-0.8cm-\i*0.12cm}]current page.north east);
+    }
+  \end{tikzpicture}%
+  \vskip0.45cm%
+  \begin{beamercolorbox}[wd=\paperwidth, leftskip=1.0cm, rightskip=1.0cm]{title}%
+    \usebeamerfont{title}\inserttitle\par%
+    \vskip0.25em%
+    {\color{RMember}\rule{2.5cm}{1.2pt}}\par%
+    \vskip0.30em%
+    {\usebeamerfont{author}\color{RMmist}\insertauthor%
+     \ifx\insertinstitute\@empty\else
+       \quad\textbar\quad{\usebeamerfont{institute}\insertinstitute}%
+     \fi\par}%
+  \end{beamercolorbox}%
+  \vskip0.55cm%
+}
+
+% ---------------------------------------------------------------------------
+% Frametitle — used for in-poster section frames if needed
+% ---------------------------------------------------------------------------
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip%
+  \begin{beamercolorbox}[wd=\paperwidth, sep=0.6em, leftskip=1.2em]{frametitle}%
+    \usebeamerfont{frametitle}\insertframetitle%
+  \end{beamercolorbox}%
+}
+
+% ---------------------------------------------------------------------------
+% Footline — slim footer with accent stripe
+% ---------------------------------------------------------------------------
+\setbeamertemplate{footline}{%
+  \leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=\paperwidth, ht=0.18cm, dp=0pt]{}%
+      \color{RMember}\hrule height 0.18cm\relax%
+    \end{beamercolorbox}%
+  }%
+  \hbox{%
+    \begin{beamercolorbox}[
+        wd=\paperwidth, ht=1.0cm, dp=0.3cm,
+        leftskip=1.2cm, rightskip=1.2cm]{section in head/foot}%
+      \usebeamerfont{author}\small%
+      Research Methods SS2026 \,\textbullet\, Exercise 2 \hfill Group 5%
+    \end{beamercolorbox}%
+  }%
+}
+
+% ---------------------------------------------------------------------------
+% Caption styling
+% ---------------------------------------------------------------------------
+\setbeamertemplate{caption}[numbered]
+\setbeamercolor{caption name}{fg=RMember}
+\setbeamerfont{caption name}{family=\sffamily, series=\bfseries}
+
+\endinput
