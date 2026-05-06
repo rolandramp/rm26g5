@@ -67,9 +67,17 @@
 % ---------------------------------------------------------------------------
 % Itemize markers — small filled squares for a clean grid feel
 % ---------------------------------------------------------------------------
-\setbeamertemplate{itemize item}{\raisebox{0.15ex}{\footnotesize\(\blacksquare\)}}
-\setbeamertemplate{itemize subitem}{\raisebox{0.2ex}{\scriptsize\(\blacktriangleright\)}}
+\setbeamertemplate{itemize item}{%
+  \raisebox{0.45ex}{\textcolor{RMember}{\rule{0.55em}{0.18ex}}}\hspace{0.15em}}
+\setbeamertemplate{itemize subitem}{%
+  \raisebox{0.45ex}{\textcolor{RMocean}{\rule{0.40em}{0.14ex}}}\hspace{0.15em}}
 \setbeamertemplate{itemize subsubitem}{\raisebox{0.2ex}{\scriptsize\(\cdot\)}}
+
+% Indent itemize lists so bullets sit inside the block, not flush with the edge
+\setlength{\leftmargini}{2.0em}
+\setlength{\leftmarginii}{1.8em}
+\setlength{\leftmarginiii}{1.6em}
+\setlength{\labelsep}{0.1em}
 
 % ---------------------------------------------------------------------------
 % Block template — rounded card with a colored ribbon header
@@ -82,7 +90,7 @@
       leftskip=0.8em,
       rightskip=0.8em,
       rounded=false]{block title}%
-    \raisebox{-0.2ex}{\rule[-0.4ex]{0.35em}{1.6ex}}\hskip0.55em%
+    \raisebox{-0.2ex}{\rule[0ex]{0.3em}{2ex}}\hskip0.55em%
     \usebeamerfont{block title}\insertblocktitle%
   \end{beamercolorbox}%
   \nointerlineskip%
@@ -152,35 +160,35 @@
     % main banner — compact
     \fill[RMmidnight]
       (current page.north west) rectangle
-      ([yshift=-2.6cm]current page.north east);
+      ([yshift=-1.85cm]current page.north east);
     % ember stripe along the bottom of the banner
     \fill[RMember]
-      ([yshift=-2.6cm]current page.north west) rectangle
-      ([yshift=-2.72cm]current page.north east);
+      ([yshift=-1.85cm]current page.north west) rectangle
+      ([yshift=-1.97cm]current page.north east);
     % subtle ocean band just below
     \fill[RMocean]
-      ([yshift=-2.72cm]current page.north west) rectangle
-      ([yshift=-2.78cm]current page.north east);
+      ([yshift=-1.97cm]current page.north west) rectangle
+      ([yshift=-2.03cm]current page.north east);
     % geometric accent — three squares in the upper-right
     \foreach \i in {0,1,2}{%
       \fill[RMember, opacity={0.35+0.25*\i}]
-        ([xshift={-0.9cm-\i*0.55cm},yshift={-0.45cm-\i*0.12cm}]current page.north east)
+        ([xshift={-0.9cm-\i*0.55cm},yshift={-0.35cm-\i*0.10cm}]current page.north east)
         rectangle
-        ([xshift={-0.55cm-\i*0.55cm},yshift={-0.8cm-\i*0.12cm}]current page.north east);
+        ([xshift={-0.55cm-\i*0.55cm},yshift={-0.65cm-\i*0.10cm}]current page.north east);
     }
   \end{tikzpicture}%
-  \vskip0.45cm%
+  \vskip0.35cm%
   \begin{beamercolorbox}[wd=\paperwidth, leftskip=1.0cm, rightskip=1.0cm]{title}%
     \usebeamerfont{title}\inserttitle\par%
-    \vskip0.25em%
+    \vskip0.20em%
     {\color{RMember}\rule{2.5cm}{1.2pt}}\par%
-    \vskip0.30em%
+    \vskip0.25em%
     {\usebeamerfont{author}\color{RMmist}\insertauthor%
      \ifx\insertinstitute\@empty\else
        \quad\textbar\quad{\usebeamerfont{institute}\insertinstitute}%
      \fi\par}%
   \end{beamercolorbox}%
-  \vskip0.55cm%
+  \vskip0.85cm%
 }
 
 % ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 \usepackage[
 	orientation=portrait,
 	size=a4,
-	scale=1.21, 
+	scale=1,
 ]{beamerposter}
 \usetheme{RM5}
 
@@ -10,6 +10,12 @@
 \usepackage{amsmath,amsthm,amssymb,latexsym}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric, fit, backgrounds}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
 
 \title{Evaluating RAG models}
 \author{László Takács \and Roland Ramp \and Richard Zilincik}
@@ -18,5 +24,351 @@
 
 \begin{document}
 \begin{frame}{}
+
+\begin{columns}[t, totalwidth=\textwidth]
+
+\begin{column}{0.495\textwidth}
+
+\begin{block}{Problem}
+	Retrieval-Augmented Generation (RAG) grounds large language models in external documents by retrieving relevant passages and feeding them to the generator. The quality of a RAG pipeline depends on many interacting choices; embedding model, chunking strategy, retriever, and generator. These choices interact in ways that are difficult to predict from theory alone.
+
+	We ask: \emph{how do different RAG configurations compare on a biomedical question-answering task, and which trade-offs between answer quality, retrieval precision, and operational cost are observed in practice?} To answer this, we systematically benchmark three RAG systems on the \texttt{rag-mini-bioasq} dataset and evaluate them with a combination of RAGAS metrics and lexical baselines.
+\end{block}
+
+\begin{block}{Benchmarked Stacks}
+	All runs share the same LangChain + Chroma pipeline (Python 3.12 slim, FastAPI, Docker Compose); only generator and embedding endpoints differ. Two stacks: a self-hosted pipeline run as a 3$\times$3 factorial, and a hosted-generator pipeline run as OFAT sweeps around a baseline.
+
+	\begin{center}
+	\begin{tikzpicture}[
+		font=\scriptsize,
+		stage/.style={draw=RMmidnight, fill=RMpaper, rounded corners=2pt,
+			minimum width=1.55cm, minimum height=0.55cm, align=center,
+			inner sep=2pt},
+		swap/.style={draw=RMember, fill=RMember!15, rounded corners=2pt,
+			minimum width=1.55cm, minimum height=0.55cm, align=center,
+			inner sep=2pt},
+		arrow/.style={-Stealth, thick, draw=RMocean},
+		node distance=0.35cm,
+	]
+		\node[stage] (ing)  {Ingest};
+		\node[swap,  right=of ing] (chk)  {Chunk};
+		\node[swap,  right=of chk] (emb)  {Embed};
+		\node[stage, right=of emb] (vec)  {Chroma};
+		\node[stage, below=0.5cm of vec] (ret) {Retrieve};
+		\node[swap,  left=of ret] (gen) {Generate};
+		\node[stage, left=of gen] (eval) {RAGAS};
+		\draw[arrow] (ing) -- (chk);
+		\draw[arrow] (chk) -- (emb);
+		\draw[arrow] (emb) -- (vec);
+		\draw[arrow] (vec) -- (ret);
+		\draw[arrow] (ret) -- (gen);
+		\draw[arrow] (gen) -- (eval);
+	\end{tikzpicture}\\[-0.2em]
+	{\scriptsize \textcolor{RMember}{$\blacksquare$} varied between runs \quad
+	 \textcolor{RMmidnight}{$\blacksquare$} fixed for all runs}
+	\end{center}
+
+	\begin{center}
+	\begin{tikzpicture}[
+		font=\scriptsize,
+		card/.style={draw, rounded corners=3pt, line width=0.8pt,
+			text width=3.85cm, align=left, inner sep=5pt},
+	]
+		% --- Local stack ---
+		\node[card, draw=RMmidnight, fill=RMmidnight!7] (L) {%
+			{\color{RMmidnight}\bfseries Local stack}\enspace\colorbox{RMmidnight}{\color{white}\tiny\bfseries\strut\,SELF-HOSTED\,}\\[2pt]%
+			{\bfseries gen.}\,(fixed): \texttt{Ministral-3-3B-Instruct}\,{\tiny(llama.cpp GGUF)}\\
+			{\bfseries embed}\,(varied via Ollama): \texttt{nomic}, \texttt{mxbai-large}, \texttt{bge-m3}\\
+			{\bfseries chunk}\,(varied): S / M / L\\
+			{\itshape 3$\times$3 factorial} --- \textbf{9 runs}%
+		};
+		% --- Hosted stack ---
+		\node[card, draw=RMember, fill=RMember!8, right=0.25cm of L] (H) {%
+			{\color{RMember}\bfseries Hosted stack}\enspace\colorbox{RMember}{\color{white}\tiny\bfseries\strut\,OPENROUTER\,+\,OLLAMA\,}\\[2pt]%
+			{\bfseries gen.}\,(varied, OpenRouter): \texttt{gemma-4-26b}$^\ast$, \texttt{mistral-small-2603}, \texttt{qwen3-flash}\\
+			{\bfseries embed}\,(varied, Ollama): \texttt{nomic}$^\ast$, \texttt{mxbai-large}, \texttt{bge-m3}\\
+			{\bfseries chunk}\,(varied): S / M$^\ast$ / L\\
+			{\itshape OFAT sweeps}; $^\ast$=baseline --- \textbf{7 runs}%
+		};
+	\end{tikzpicture}
+	\end{center}
+
+	\smallskip
+	{\scriptsize\textbf{Implementation:} \texttt{Dockerfile} builds the framework as a pip-installable package; raw run outputs (\texttt{results.json}, \texttt{experiment\_info.txt}) are written to \texttt{results/} per timestamped run.}
+\end{block}
+
+\begin{block}{Comparison Criteria \& Measurement}
+	Each system is scored on the same biomedical QA test set with two complementary metric families. RAGAS uses an LLM-as-judge for the semantic metrics; BLEU and ROUGE provide a classical lexical baseline. For every metric we report \emph{min / max / mean / variance} across all questions.
+
+	\begin{center}
+	\renewcommand{\arraystretch}{1.15}
+	\setlength{\tabcolsep}{4pt}
+	\begin{tabular}{@{}p{3.0cm} p{1.5cm} p{3.9cm}@{}}
+		\toprule
+		\textbf{Metric} & \textbf{Range} & \textbf{What it measures} \\
+		\midrule
+		\multicolumn{3}{@{}l@{}}{\textcolor{RMember}{$\blacksquare$}~\textbf{RAGAS (LLM-judged)}} \\
+		Faithfulness          & $[0,1]$ & supported claims / total claims \\
+		Answer correctness    & $[0,1]$ & F1 + semantic vs.\ ground truth \\
+		Semantic similarity   & $[0,1]$ & cosine of answer vs.\ truth \\
+		Context precision     & $[0,1]$ & ranking quality of retrieved chunks \\
+		\midrule
+		\multicolumn{3}{@{}l@{}}{\textcolor{RMocean}{$\blacksquare$}~\textbf{Lexical baseline}} \\
+		BLEU                  & $[0,1]$ & n-gram precision \\
+		ROUGE-L (F)           & $[0,1]$ & longest common subsequence overlap \\
+		\bottomrule
+	\end{tabular}
+	\end{center}
+
+	\smallskip
+	\textbf{Pipeline-level signals (logged per run)}
+	\begin{itemize}
+		\item Active configuration: chunking profile, embedding, generator
+		\item Workload size: \texttt{max\_chunks}, \texttt{max\_questions}
+		\item Run artefacts: \texttt{results.json} + \texttt{experiment\_info.txt}
+	\end{itemize}
+\end{block}
+
+\end{column}
+
+\begin{column}{0.495\textwidth}
+
+\begin{block}{Testing Strategy}
+	Same dataset, same 15 questions, same metrics --- only configuration changes between runs, so any score delta traces back to the swapped factor. A full embedding\,$\times$\,chunking grid characterises the local stack; \emph{one-factor-at-a-time} (OFAT) sweeps then probe each remaining axis around a baseline.
+
+	\begin{center}
+	\renewcommand{\arraystretch}{1.2}
+	\setlength{\tabcolsep}{3pt}
+	\begin{tabular}{@{}c p{1.95cm} p{4.0cm} c@{}}
+		\toprule
+		 & \textbf{Sweep} & \textbf{Levels} (varied factor in \textcolor{RMember}{\bfseries orange}) & \textbf{\#} \\
+		\midrule
+		\textcolor{RMmidnight}{$\blacksquare$} & Embed\,$\times$\,Chunk & \textcolor{RMember}{\{nomic, mxbai, bge-m3\}}\,$\times$\,\textcolor{RMember}{\{S, M, L\}}\newline gen\,=\,Ministral-3B (local) & 9 \\
+		\textcolor{RMocean}{$\blacksquare$} & LLM (generator) & \textcolor{RMember}{gemma-4-26b, mistral-small, qwen3-flash}\newline embed\,=\,nomic, chunk\,=\,M & 3 \\
+		\textcolor{RMocean}{$\blacksquare$} & Embedding (hosted) & \textcolor{RMember}{bge-m3, mxbai-embed-large}\newline gen\,=\,gemma-4-26b, chunk\,=\,M & 2 \\
+		\textcolor{RMocean}{$\blacksquare$} & Chunking & \textcolor{RMember}{S\,=\,500/100, L\,=\,2000/400}\newline gen\,=\,gemma-4-26b, embed\,=\,nomic & 2 \\
+		\midrule
+		\multicolumn{3}{@{}r}{\textbf{Total runs}} & \textbf{16} \\
+		\bottomrule
+	\end{tabular}\\[-0.1em]
+	{\scriptsize \textcolor{RMmidnight}{$\blacksquare$} factorial grid \quad
+	 \textcolor{RMocean}{$\blacksquare$} OFAT around baseline}
+	\end{center}
+
+	\smallskip
+	{\scriptsize\textbf{Per-run workload \& artefacts:} caps \texttt{max\_chunks}\,=\,4000, \texttt{max\_questions}\,=\,15; output \texttt{results/<sweep>/<level>/<timestamp>/} containing \texttt{results.json} (QA + per-question scores) and \texttt{experiment\_info.txt} (config snapshot).}
+\end{block}
+
+\begin{block}{Results}
+	Per-question averages over 15 BioASQ items per run, split by stack.
+
+	\textbf{Local stack - 3$\times$3 factorial} (Ministral-3B; cell\,=\,AnsCorr; faith range 0.53--0.79):
+
+	\begin{center}
+	\renewcommand{\arraystretch}{1.0}
+	\setlength{\tabcolsep}{6pt}
+	\scriptsize
+	\begin{tabular}{@{}l c c c@{}}
+		\toprule
+		\textbf{embed\,$\backslash$\,chunk} & \textbf{S} & \textbf{M} & \textbf{L} \\
+		\midrule
+		\texttt{nomic-embed-text}  & 0.420 & 0.396 & 0.361 \\
+		\texttt{mxbai-embed-large} & 0.421 & \textbf{0.501} & 0.463 \\
+		\texttt{bge-m3}            & 0.483 & 0.452 & 0.486 \\
+		\bottomrule
+	\end{tabular}
+	\end{center}
+
+	\textbf{Hosted stack - OFAT sweeps} (baseline: nomic + gemma-4-26b + medium). Bars = RAGAS metric (legend); x-tick color = sweep group: \textcolor{RMmidnight}{\textbf{chunking}}\ \textbar\ \textcolor{RMember}{\textbf{embedding}}\ \textbar\ \textcolor{RMocean}{\textbf{LLM}}.
+
+	\begin{center}
+	\begin{tikzpicture}
+		\begin{axis}[
+			ybar=0.6pt,
+			bar width=0.16cm,
+			width=8.8cm, height=2.9cm,
+			ymin=0, ymax=1.05,
+			ytick={0,0.25,0.5,0.75,1.0},
+			ylabel={\scriptsize score},
+			ylabel style={yshift=-0.18cm, font=\scriptsize},
+			tick label style={font=\scriptsize},
+			label style={font=\scriptsize},
+			legend style={font=\tiny, draw=none, fill=none,
+				at={(0.5,1.05)}, anchor=south,
+				/tikz/every even column/.append style={column sep=0.4em}},
+			legend columns=4,
+			symbolic x coords={small,large,bge-m3,mxbai,gemma,mistral,qwen3},
+			xtick=data,
+			xticklabels={%
+				{\color{RMmidnight}small},%
+				{\color{RMmidnight}large},%
+				{\color{RMember}bge-m3},%
+				{\color{RMember}mxbai},%
+				{\color{RMocean}gemma},%
+				{\color{RMocean}mistral},%
+				{\color{RMocean}qwen3}},
+			x tick label style={rotate=25, anchor=east, font=\scriptsize, yshift=0.1cm},
+			enlarge x limits=0.05,
+			major grid style={draw=RMmist, line width=0.3pt},
+			ymajorgrids,
+			axis line style={draw=RMmidnight!50},
+			tick style={draw=RMmidnight!50},
+		]
+			\addplot[fill=RMmidnight, draw=RMmidnight] coordinates
+				{(small,0.234) (large,0.301) (bge-m3,0.312) (mxbai,0.426)
+				 (gemma,0.309) (mistral,0.318) (qwen3,0.348)};
+			\addplot[fill=RMocean, draw=RMocean] coordinates
+				{(small,1.000) (large,0.967) (bge-m3,0.956) (mxbai,0.927)
+				 (gemma,0.911) (mistral,0.901) (qwen3,0.866)};
+			\addplot[fill=RMember, draw=RMember] coordinates
+				{(small,0.083) (large,0.188) (bge-m3,0.213) (mxbai,0.184)
+				 (gemma,0.094) (mistral,0.122) (qwen3,0.156)};
+			\addplot[fill=RMember!55, draw=RMember!55] coordinates
+				{(small,0.718) (large,0.770) (bge-m3,0.601) (mxbai,0.731)
+				 (gemma,0.759) (mistral,0.762) (qwen3,0.759)};
+			\legend{AnsCorr, Faith, CtxPrec, SemSim}
+		\end{axis}
+	\end{tikzpicture}
+	\end{center}
+
+	\begin{center}
+	\begin{tikzpicture}
+		\begin{axis}[
+			ybar,
+			bar width=0.32cm,
+			width=8.8cm, height=2.7cm,
+			ymode=log,
+			log basis y=10,
+			ymin=0.8, ymax=22,
+			ytick={1,2,5,10},
+			yticklabels={1,2,5,10},
+			ylabel={\scriptsize lat.\ (s, log)},
+			ylabel style={yshift=-0.18cm, font=\scriptsize},
+			tick label style={font=\scriptsize},
+			label style={font=\scriptsize},
+			symbolic x coords={small,large,bge-m3,mxbai,gemma,mistral,qwen3},
+			xtick=data,
+			xticklabels={%
+				{\color{RMmidnight}small},%
+				{\color{RMmidnight}large},%
+				{\color{RMember}bge-m3},%
+				{\color{RMember}mxbai},%
+				{\color{RMocean}gemma},%
+				{\color{RMocean}mistral},%
+				{\color{RMocean}qwen3}},
+			x tick label style={rotate=25, anchor=east, font=\scriptsize, yshift=0.1cm},
+			enlarge x limits=0.05,
+			nodes near coords,
+			nodes near coords style={font=\tiny, color=RMink, yshift=0.05cm},
+			point meta=explicit symbolic,
+			major grid style={draw=RMmist, line width=0.3pt},
+			ymajorgrids,
+			axis line style={draw=RMmidnight!50},
+			tick style={draw=RMmidnight!50},
+		]
+			\addplot[fill=RMember, draw=RMember!80] coordinates {
+				(small,1.29)   [1.3]
+				(large,2.54)   [2.5]
+				(bge-m3,3.35)  [3.4]
+				(mxbai,2.54)   [2.5]
+				(gemma,1.95)   [2.0]
+				(mistral,1.05) [1.1]
+				(qwen3,14.25)  [14.2]
+			};
+		\end{axis}
+	\end{tikzpicture}
+	\end{center}
+
+	
+	\begin{center}
+	\renewcommand{\arraystretch}{1.1}
+	\setlength{\tabcolsep}{3pt}
+	\scriptsize
+	\begin{tabular}{@{}l l c c c c c c@{}}
+		\toprule
+		\textbf{Sweep} & \textbf{Run} & \textbf{Faith} & \textbf{AnsCorr} & \textbf{SemSim} & \textbf{CtxPrec} & \textbf{ROUGE-L} & \textbf{Lat\,(s)} \\
+		\midrule
+		\textcolor{RMmidnight}{$\blacksquare$} chunking & small             & 1.000 & 0.234 & 0.718 & 0.083 & 0.154 & 1.29 \\
+		\textcolor{RMmidnight}{$\blacksquare$} chunking & large             & 0.967 & 0.301 & 0.770 & \textbf{0.188} & 0.197 & 2.54 \\
+		\textcolor{RMember}{$\blacksquare$} embedding   & bge-m3            & 0.956 & 0.312 & 0.601 & \textbf{0.213} & 0.190 & 3.35 \\
+		\textcolor{RMember}{$\blacksquare$} embedding   & mxbai-large       & 0.927 & \textbf{0.426} & 0.731 & 0.184 & \textbf{0.222} & 2.54 \\
+		\textcolor{RMocean}{$\blacksquare$} LLM         & gemma-4-26b\,$\circ$ & 0.911 & 0.309 & 0.759 & 0.094 & 0.207 & 1.95 \\
+		\textcolor{RMocean}{$\blacksquare$} LLM         & mistral-small     & 0.901 & 0.318 & \textbf{0.762} & 0.122 & 0.197 & \textbf{1.05} \\
+		\textcolor{RMocean}{$\blacksquare$} LLM         & qwen3-flash       & 0.866 & 0.348 & 0.759 & 0.156 & 0.212 & 14.25 \\
+		\bottomrule
+	\end{tabular}\\[-0.1em]
+	{\scriptsize \textbf{bold} = best in column \quad $\circ$ = baseline}
+	\end{center}
+
+	{\scriptsize\textbf{Hosted-stack headlines:}
+	\textcolor{RMember}{$\blacksquare$}~\texttt{mxbai} $\uparrow$~AnsCorr +38\,\% (vs.\ \texttt{nomic} baseline); \quad
+	\textcolor{RMmidnight}{$\blacksquare$}~large chunks $\uparrow$~CtxPrec 2$\times$ vs.\ small; \quad
+	\textcolor{RMocean}{$\blacksquare$}~LLM swap shifts latency 13$\times$, quality flat.}
+\end{block}
+
+\end{column}
+
+\end{columns}
+
+\medskip
+
+\begin{block}{Conclusion \& Outlook}
+	\newlength{\findingwidth}
+	\setlength{\findingwidth}{0.24\linewidth}
+	\begin{center}
+	\begin{tikzpicture}[
+		font=\footnotesize,
+		finding/.style={draw, rounded corners=4pt, line width=0.9pt,
+			text width=\findingwidth, align=center, inner sep=10pt},
+	]
+		\node[finding, draw=RMember, fill=RMember!8] (E) {%
+			{\color{RMember}\bfseries\normalsize Embedding}\\[2pt]
+			\colorbox{RMember}{\color{white}\tiny\bfseries\strut\,QUALITY DRIVER\,}\\[4pt]
+			{\bfseries\large +38\,\%}\enspace{\small AnsCorr}\\[1pt]
+			{\scriptsize\texttt{mxbai} vs.\ \texttt{nomic},\ $0.31\!\to\!0.43$}%
+		};
+		\node[finding, draw=RMmidnight, fill=RMmidnight!6, right=0.35cm of E] (C) {%
+			{\color{RMmidnight}\bfseries\normalsize Chunking}\\[2pt]
+			\colorbox{RMmidnight}{\color{white}\tiny\bfseries\strut\,RETRIEVAL DRIVER\,}\\[4pt]
+			{\bfseries\large $2\!\times$}\enspace{\small CtxPrec}\\[1pt]
+			{\scriptsize large \texttt{2000/400} vs.\ small,\ $0.083\!\to\!0.188$}%
+		};
+		\node[finding, draw=RMocean, fill=RMocean!8, right=0.35cm of C] (G) {%
+			{\color{RMocean}\bfseries\normalsize Generator}\\[2pt]
+			\colorbox{RMocean}{\color{white}\tiny\bfseries\strut\,LATENCY ONLY\,}\\[4pt]
+			{\bfseries\large $13\!\times$}\enspace{\small latency}\\[1pt]
+			{\scriptsize\texttt{qwen3} vs.\ \texttt{mistral},\ $14.25\!\to\!1.05$\,s}%
+		};
+	\end{tikzpicture}
+	\end{center}
+
+	\smallskip
+	\begin{minipage}[t]{0.30\linewidth}
+		\textbf{Headline}
+		\begin{itemize}
+			\item embedding $\gg$ chunking $>$ generator (hosted OFAT)
+			\item hosted faith 0.87--1.00; local 0.53--0.79
+			\item variance lives upstream of generator
+		\end{itemize}
+	\end{minipage}\hfill
+	\begin{minipage}[t]{0.30\linewidth}
+		\textbf{Limits}
+		\begin{itemize}
+			\item 15 questions / run --- wide CIs
+			\item single judge --- correlated noise
+			\item one domain (biomedical QA)
+		\end{itemize}
+	\end{minipage}\hfill
+	\begin{minipage}[t]{0.30\linewidth}
+		\textbf{Next steps}
+		\begin{itemize}
+			\item full BioASQ split
+			\item hybrid BM25 + dense retrieval
+			\item cross-encoder re-ranker
+			\item second judge --- bias check
+		\end{itemize}
+	\end{minipage}
+\end{block}
+
 \end{frame}
 \end{document}
