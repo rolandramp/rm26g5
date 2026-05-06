@@ -30,13 +30,13 @@
 \begin{column}{0.495\textwidth}
 
 \begin{block}{Problem}
-	Retrieval-Augmented Generation (RAG) grounds large language models in external documents by retrieving relevant passages and feeding them to the generator. The quality of a RAG pipeline depends on many interacting choices; embedding model, chunking strategy, retriever, and generator. These choices interact in ways that are difficult to predict from theory alone.
-
-	We ask: \emph{how do different RAG configurations compare on a biomedical question-answering task, and which trade-offs between answer quality, retrieval precision, and operational cost are observed in practice?} To answer this, we systematically benchmark three RAG systems on the \texttt{rag-mini-bioasq} dataset and evaluate them with a combination of RAGAS metrics and lexical baselines.
+	\textbf{RAG pipeline quality} depends on interacting choices: embedding model, chunking strategy, retriever, generator. \\[0.1em]
+	\textbf{Research question:} How do configurations compare on biomedical QA? Which trade-offs (quality, retrieval precision, cost) emerge in practice?\\[0.1em]
+	\textbf{Approach:} Benchmark 3 RAG systems on \texttt{rag-mini-bioasq} with RAGAS metrics + lexical baselines.
 \end{block}
 
 \begin{block}{Benchmarked Stacks}
-	All runs share the same LangChain + Chroma pipeline (Python 3.12 slim, FastAPI, Docker Compose); only generator and embedding endpoints differ. Two stacks: a self-hosted pipeline run as a 3$\times$3 factorial, and a hosted-generator pipeline run as OFAT sweeps around a baseline.
+	\textbf{Shared:} LangChain + Chroma (Python 3.12, FastAPI, Docker). \textbf{Varied:} generator, embedding. \textbf{Two stacks:} self-hosted (3$\times$3 factorial) \& hosted (OFAT sweeps).
 
 	\begin{center}
 	\begin{tikzpicture}[
@@ -94,11 +94,11 @@
 	\end{center}
 
 	\smallskip
-	{\scriptsize\textbf{Implementation:} \texttt{Dockerfile} builds the framework as a pip-installable package; raw run outputs (\texttt{results.json}, \texttt{experiment\_info.txt}) are written to \texttt{results/} per timestamped run.}
+	{\scriptsize\textbf{Implementation:} Dockerized \texttt{.json} output per timestamped run.}
 \end{block}
 
 \begin{block}{Comparison Criteria \& Measurement}
-	Each system is scored on the same biomedical QA test set with two complementary metric families. RAGAS uses an LLM-as-judge for the semantic metrics; BLEU and ROUGE provide a classical lexical baseline. For every metric we report \emph{min / max / mean / variance} across all questions.
+	\textbf{Test set:} same 15 biomedical QA items. \textbf{Metrics:} RAGAS (LLM-judged) + BLEU/ROUGE (lexical baseline). \textbf{Per metric:} min / max / mean / variance.
 
 	\begin{center}
 	\renewcommand{\arraystretch}{1.15}
@@ -121,12 +121,7 @@
 	\end{center}
 
 	\smallskip
-	\textbf{Pipeline-level signals (logged per run)}
-	\begin{itemize}
-		\item Active configuration: chunking profile, embedding, generator
-		\item Workload size: \texttt{max\_chunks}, \texttt{max\_questions}
-		\item Run artefacts: \texttt{results.json} + \texttt{experiment\_info.txt}
-	\end{itemize}
+	{\scriptsize \textbf{Logged per run:} config (chunk, embed, gen) • workload size • artefacts (\texttt{results.json})}
 \end{block}
 
 \end{column}
@@ -134,7 +129,7 @@
 \begin{column}{0.495\textwidth}
 
 \begin{block}{Testing Strategy}
-	Same dataset, same 15 questions, same metrics --- only configuration changes between runs, so any score delta traces back to the swapped factor. A full embedding\,$\times$\,chunking grid characterises the local stack; \emph{one-factor-at-a-time} (OFAT) sweeps then probe each remaining axis around a baseline.
+	\textbf{Constant:} dataset, 15 questions, metrics. \textbf{Variable:} configuration only — score delta = swapped factor. \textbf{Local:} full embed\,$\times$\,chunk grid (3$\times$3). \textbf{Hosted:} OFAT sweeps around baseline.
 
 	\begin{center}
 	\renewcommand{\arraystretch}{1.2}
@@ -150,19 +145,17 @@
 		\midrule
 		\multicolumn{3}{@{}r}{\textbf{Total runs}} & \textbf{16} \\
 		\bottomrule
-	\end{tabular}\\[-0.1em]
+	\end{tabular}\\[0.3em]
 	{\scriptsize \textcolor{RMmidnight}{$\blacksquare$} factorial grid \quad
 	 \textcolor{RMocean}{$\blacksquare$} OFAT around baseline}
 	\end{center}
 
 	\smallskip
-	{\scriptsize\textbf{Per-run workload \& artefacts:} caps \texttt{max\_chunks}\,=\,4000, \texttt{max\_questions}\,=\,15; output \texttt{results/<sweep>/<level>/<timestamp>/} containing \texttt{results.json} (QA + per-question scores) and \texttt{experiment\_info.txt} (config snapshot).}
+	{\scriptsize\textbf{Per-run:} caps (\texttt{max\_chunks}=4000, \texttt{max\_questions}=15) • output \texttt{results.json} (QA scores)}
 \end{block}
 
 \begin{block}{Results}
-	Per-question averages over 15 BioASQ items per run, split by stack.
-
-	\textbf{Local stack - 3$\times$3 factorial} (Ministral-3B; cell\,=\,AnsCorr; faith range 0.53--0.79):
+	\textbf{Local stack - 3$\times$3 factorial} (Ministral-3B; cell\,=\,AnsCorr; faith 0.53--0.79):
 
 	\begin{center}
 	\renewcommand{\arraystretch}{1.0}
@@ -344,29 +337,29 @@
 
 	\smallskip
 	\begin{minipage}[t]{0.30\linewidth}
-		\textbf{Headline}
-		\begin{itemize}
-			\item embedding $\gg$ chunking $>$ generator (hosted OFAT)
-			\item hosted faith 0.87--1.00; local 0.53--0.79
-			\item variance lives upstream of generator
-		\end{itemize}
+		{\bfseries Headline}\\[-0.15em]
+		{\scriptsize
+		embed $\gg$ chunk $>$ gen (OFAT) \\
+		faith: 0.87--1.00 (hosted) vs.\ 0.53--0.79 (local) \\
+		variance upstream of gen
+		}
 	\end{minipage}\hfill
 	\begin{minipage}[t]{0.30\linewidth}
-		\textbf{Limits}
-		\begin{itemize}
-			\item 15 questions / run --- wide CIs
-			\item single judge --- correlated noise
-			\item one domain (biomedical QA)
-		\end{itemize}
+		{\bfseries Limits}\\[-0.15em]
+		{\scriptsize
+		15 Q/run (wide CIs) \\
+		single judge (correlated) \\
+		one domain (biomedical)
+		}
 	\end{minipage}\hfill
 	\begin{minipage}[t]{0.30\linewidth}
-		\textbf{Next steps}
-		\begin{itemize}
-			\item full BioASQ split
-			\item hybrid BM25 + dense retrieval
-			\item cross-encoder re-ranker
-			\item second judge --- bias check
-		\end{itemize}
+		{\bfseries Next}\\[-0.15em]
+		{\scriptsize
+		full BioASQ \\
+		BM25 + dense \\
+		cross-encoder re-rank \\
+		second judge (bias)
+		}
 	\end{minipage}
 \end{block}
 
